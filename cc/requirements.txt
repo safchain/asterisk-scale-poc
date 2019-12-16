@@ -1,0 +1,4 @@
+kombu
+asynqp
+git+git://github.com/wazo-platform/ari-py@master
+git+git://github.com/digium/swagger-py.git
