@@ -1,0 +1,19 @@
+global
+    daemon
+    maxconn 500
+    stats socket /var/run/haproxy/haproxy.sock mode 0600 level admin
+
+defaults
+    mode http
+    option  dontlognull
+    retries 3
+    option redispatch
+    timeout connect 5s
+    timeout client 50s
+    timeout server 50s
+    balance  roundrobin
+
+listen http-in
+    bind *:8500 {{range service "consul"}}
+    server {{.Node}} {{.Address}}:8500{{end}}
+
