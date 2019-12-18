@@ -1,33 +1,43 @@
----
-asterisk:
-  build: ./asterisk
-  ports: 
-    - 5060:5060/udp
-    - 8888:8888/tcp
-  links:
-    - consul
-    - rabbitmq
-  expose:
-    - 8888/tcp
-api-gateway:
-  build: ./api-gateway
-  links:
-    - consul
-  expose:
-    - 80/tcp
-consul:
-  image: consul
-  ports:
-    - 8500:8500
-postgresql:
-  image: postgres
-  ports:
-    - 5432:5432/tcp
-rabbitmq:
-  image: rabbitmq:3-management
-  ports:
-    - 5672:5672/tcp
-    - 15672:15672/tcp
-  expose:
-    - 5672/tcp
-    - 15672/tcp
+version: '3'
+
+services:
+  asterisk:
+    build: ./asterisk
+    ports:
+      - 5060:5060/udp
+      - 8888:8888/tcp
+      - 10000-10050:10000-10050/udp
+    links:
+      - consul
+      - rabbitmq
+    expose:
+      - 8888/tcp
+  api-gateway:
+    build: ./api-gateway
+    links:
+      - consul
+    expose:
+      - 80/tcp
+  consul:
+    image: consul
+    ports:
+      - 8500:8500/tcp
+  postgresql:
+    image: postgres
+    ports:
+      - 5432:5432/tcp
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672/tcp
+      - 15672:15672/tcp
+    expose:
+      - 5672/tcp
+      - 15672/tcp
+
+networks:
+    default:
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.28.0.0/16

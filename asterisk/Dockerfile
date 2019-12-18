@@ -7,7 +7,9 @@ RUN add-apt-repository 'deb http://mirror.wazo.community/debian pelican-buster m
 RUN wget http://mirror.wazo.community/wazo_current.key
 RUN apt-key add wazo_current.key
 RUN apt-get update
-RUN apt-get -y install asterisk asterisk-dev librabbitmq-dev make gcc libcurl4-openssl-dev git jq wazo-res-stasis-amqp wazo-res-amqp asterisk-sounds-main strace net-tools lsof procps vim
+RUN apt-get -y install asterisk asterisk-dev librabbitmq-dev make gcc libcurl4-openssl-dev \
+    git jq wazo-res-stasis-amqp wazo-res-amqp asterisk-sounds-main strace net-tools lsof \
+    procps vim
 
 # clean up previous conf
 RUN rm -rf /etc/asterisk/*
