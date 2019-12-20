@@ -5,16 +5,18 @@ server 127.0.0.1:80;
 {{ end }}
 }
 
+map $http_x_asterisk_id $asterisk_id {
+  default http://backend;
+
+{{ range service "asterisk" }}
+  {{ .ServiceMeta.eid }} http://{{ .Address }}:8888;
+{{ end }}
+}
+
 server {
   location / {
     proxy_set_header X-Forwarded-Host $remote_addr;
     proxy_set_header Host $host:8888;
-    proxy_pass http://backend;
+    proxy_pass http://$asterisk_id;
   }
-  {{ range service "asterisk" }}
-    location /{{ .ServiceMeta.eid }}/ {
-      rewrite ^/{{ .ServiceMeta.eid }}/(.*)$ /$1 break;
-      proxy_pass http://{{ .Address }}:8888;
-    }
-  {{ end }}
 }
