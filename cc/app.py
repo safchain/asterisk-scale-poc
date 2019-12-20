@@ -5,6 +5,7 @@ import asynqp
 import logging
 import json
 import yaml
+import consul.aio
 
 RECONNECT_RATE = 1
 
@@ -15,14 +16,18 @@ class Context:
 
     def __init__(self):
 
-        self.api_endpoint = "http://localhost:8888"
+        self.api_endpoint = "http://localhost:8088"
         self.api_username = "wazo"
         self.api_password = "wazo"
+
         self.amqp_host = "127.0.0.1"
         self.amqp_port = 5672
         self.amqp_username = "guest"
         self.amqp_password = "guest"
         self.amqp_exchange = "wazo"
+
+        self.consul_host = "127.0.0.1"
+        self.consul_port = 8500
 
     def from_conf(self, conf="app.yml"):
         doc = yaml.load(conf)
@@ -36,6 +41,9 @@ class Context:
         self.amqp_username = doc.amqp.username
         self.amqp_password = doc.amqp.password
         self.amqp_exchange = doc.amqp.exchange
+
+        self.consul_host = doc.consul.host
+        self.consul_port = doc.consul.port
 
 
 class Channel:
@@ -86,15 +94,18 @@ class Application:
         reconnect_task = loop.create_task(self.reconnector(queue))
         process_msgs_task = loop.create_task(
             self.process_msgs(queue))
+        register_task = loop.create_task(self.register_loop())
 
         app_task = loop.create_task(self.run())
 
         try:
             loop.run_until_complete(app_task)
         finally:
+            register_task.cancel()
             reconnect_task.cancel()
             process_msgs_task.cancel()
 
+            loop.run_until_complete(register_task)
             loop.run_until_complete(reconnect_task)
             loop.run_until_complete(process_msgs_task)
 
@@ -138,7 +149,9 @@ class Application:
                         await asyncio.sleep(RECONNECT_RATE)
                     else:
                         logging.info("Successfully connected and consuming")
-                        await self.register()
+                        # NOTE need to be reworked once consul will create
+                        # apps
+                        # await self.register()
 
                 await asyncio.sleep(0.1)
         except asyncio.CancelledError:
@@ -189,20 +202,59 @@ class Application:
             login=self.context.api_username,
             password=self.context.api_password)
         async with aiohttp.ClientSession(auth=auth) as session:
-            async with session.post(url) as response:
+            async with session.post(url, headers=headers) as response:
                 return response
 
-    async def register(self):
-        logging.info("Registering application %s" % self.name)
+    async def register_loop(self):
+        loop = asyncio.get_event_loop()
 
-        # NOTE this will change in order to make a call toward consul
-        response = await self.post(
-            "%s/ari/amqp/%s" % (self.context.api_endpoint, self.name))
-        if response.status <= 299:
-            logging.info("Application %s registered" % self.name)
-        else:
-            logging.error("Error while registering application %s : %s" % (
-                self.name, response.reason))
+        try:
+            c = consul.aio.Consul(
+                host=self.context.consul_host,
+                port=self.context.consul_port, loop=loop)
+
+            while True:
+                eids = []
+
+                (_, nodes) = await c.health.service("asterisk")
+                for node in nodes:
+                    service = node.get("Service", {})
+                    meta = service.get("Meta", {})
+                    eid = meta.get("eid")
+
+                    if eid:
+                        eids.append(eid)
+
+                for eid in eids:
+                    await self.register(eid)
+
+                await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            pass
+
+    async def register(self, asterisk_id):
+        while True:
+            # NOTE this will change in order to make a call toward consul
+            response = None
+            if asterisk_id:
+                logging.info(
+                    "Registering application %s on %s" %
+                    (self.name, asterisk_id))
+                response = await self.request(
+                    asterisk_id, "/ari/amqp/%s" % self.name)
+            else:
+                logging.info("Registering application %s" % self.name)
+                response = await self.post(
+                    "%s/ari/amqp/%s" % (self.context.api_endpoint, self.name))
+
+            if response.status <= 299:
+                logging.info("Application %s registered" % self.name)
+                return
+            else:
+                logging.error("Error while registering application %s : %s" % (
+                    self.name, response.reason))
+
+            await asyncio.sleep(5)
 
     async def answer(self, asterisk_id, channel):
         logging.info("Answering call on channel : %s" % channel.id)

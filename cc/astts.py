@@ -4,21 +4,26 @@ import json
 import uvicorn
 from fastapi import FastAPI
 from starlette.responses import Response
-import tempfile
 from gtts import gTTS
 import argparse
+import os
+import errno
+import hashlib
+import os.path
 
 from app import Application, Context
 
 logger = logging.getLogger(__name__)
 
+
 class HelloApplication(Application):
 
-    def __init__(self, context, name, addr, port=8080):
+    def __init__(self, context, name, addr, port=8080, data_dir='/tmp/astts'):
         super().__init__(context, "hello")
 
         self.addr = addr
         self.port = port
+        self.data_dir = data_dir
 
         self.speak_task = None
 
@@ -36,13 +41,22 @@ class HelloApplication(Application):
             pass
 
     async def say(self, text=""):
-        fp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
-        tts = gTTS(text, 'en')
-        tts.write_to_fp(fp)
-        fp.close()
+        try:
+            os.makedirs(self.data_dir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+        filename = hashlib.md5(text.encode()).hexdigest()
+        fullpath = "%s/%s.mp3" % (self.data_dir, filename)
+
+        if not os.path.isfile(fullpath):
+            with open(fullpath, "wb") as fp:
+                tts = gTTS(text, 'en')
+                tts.write_to_fp(fp)
 
         proc = await asyncio.create_subprocess_exec(
-            '/usr/bin/sox', fp.name, '-r', '8000', '-t', 'wav', '-',
+            '/usr/bin/sox', fullpath, '-r', '8000', '-t', 'wav', '-',
             stdout=asyncio.subprocess.PIPE)
 
         data = await proc.stdout.read()
@@ -52,11 +66,14 @@ class HelloApplication(Application):
         return Response(content=data, media_type="audio/wav")
 
     async def onStart(self, asterisk_id, channel):
-        logging.info("Starting application on channel %s" % channel.id)
+        logging.info(
+            "Starting application on channel %s:%s" %
+            (asterisk_id, channel.id))
         asyncio.create_task(self.answer(asterisk_id, channel))
 
     async def onEnd(self, asterisk_id, channel):
-        logging.info("End of application on channel %s" % channel.id)
+        logging.info(
+            "End of application on channel %s:%s" % (asterisk_id, channel.id))
 
         if self.speak_task:
             self.speak_task.cancel()
@@ -80,17 +97,24 @@ class HelloApplication(Application):
 
     async def say_asterisk_id(self, asterisk_id, channel):
         while True:
-            logging.info("Going to say hello to channel %s" % channel.id)
+            logging.info(
+                "Going to say something on channel %s:%s" %
+                (asterisk_id, channel.id))
+
+            sub_id = asterisk_id.split(":")[-1]
 
             endpoint = "http://%s:%d" % (self.addr, self.port)
-            text = 'Your%2Bare%2Bconnected%2Bto%2BAsterisk%2Bnumber%2B' + asterisk_id
+            text = ('Your%2Bare%2Bconnected%2B'
+                    'to%2BAsterisk%2Bnumber%2B' + sub_id)
 
             url = ("/ari/channels/%s/play?media=sound:"
                    "%s/say?text=%s") % (channel.id, endpoint, text)
 
             response = await self.request(asterisk_id, url)
             if response.status <= 299:
-                logging.info("Said hello on channel %s" % channel.id)
+                logging.info(
+                    "Said hello on channel %s:%s" %
+                    (asterisk_id, channel.id))
             else:
                 logging.error("Error while saiying hello %s : %s" % (
                     channel.id, response.reason))
@@ -107,14 +131,17 @@ def main():
                         help="local port that Asterisk can reach")
     parser.add_argument("--conf", default="",
                         help="application config file")
+    parser.add_argument("--data-dir", default="/tmp/astts",
+                        help="application data directory")
     args = parser.parse_args()
 
     context = Context()
 
     if args.conf:
-        context.from_conf(conf)
+        context.from_conf(args.conf)
 
-    app = HelloApplication(context, "hello", args.addr, args.port)
+    app = HelloApplication(context, "hello", args.addr,
+                           args.port, args.data_dir)
     app.launch()
 
 

@@ -1,2 +1,3 @@
+{{ with service "asterisk" }}
 {{range service "asterisk"}}
-1 sip:{{.Address}}:{{.Port}}{{end}}
+1 sip:{{.Address}}:{{.Port}}{{end}}{{end}}
