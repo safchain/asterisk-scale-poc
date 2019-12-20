@@ -1,3 +1,7 @@
 kombu
 asynqp
 aiohttp
+fastapi
+uvicorn
+gTTS
+pyyaml
