@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class Context:
 
     def __init__(self):
-
         self.api_endpoint = "http://localhost:8088"
         self.api_username = "wazo"
         self.api_password = "wazo"
@@ -91,10 +90,10 @@ class Application:
         loop = asyncio.get_event_loop()
         queue = asyncio.Queue()
 
-        reconnect_task = loop.create_task(self.reconnector(queue))
+        reconnect_task = loop.create_task(self.reconnector(loop, queue))
         process_msgs_task = loop.create_task(
             self.process_msgs(queue))
-        register_task = loop.create_task(self.register_loop())
+        register_task = loop.create_task(self.register_loop(loop))
 
         app_task = loop.create_task(self.run())
 
@@ -133,7 +132,7 @@ class Application:
             return None
         return connection
 
-    async def reconnector(self, queue):
+    async def reconnector(self, loop, queue):
         try:
             connection = None
             while True:
@@ -149,9 +148,7 @@ class Application:
                         await asyncio.sleep(RECONNECT_RATE)
                     else:
                         logging.info("Successfully connected and consuming")
-                        # NOTE need to be reworked once consul will create
-                        # apps
-                        # await self.register()
+                        await self.register_consul(loop)
 
                 await asyncio.sleep(0.1)
         except asyncio.CancelledError:
@@ -205,9 +202,7 @@ class Application:
             async with session.post(url, headers=headers) as response:
                 return response
 
-    async def register_loop(self):
-        loop = asyncio.get_event_loop()
-
+    async def register_loop(self, loop):
         try:
             c = consul.aio.Consul(
                 host=self.context.consul_host,
@@ -226,13 +221,32 @@ class Application:
                         eids.append(eid)
 
                 for eid in eids:
-                    await self.register(eid)
+                    await self.register_ari(eid)
 
                 await asyncio.sleep(5)
         except asyncio.CancelledError:
             pass
 
-    async def register(self, asterisk_id):
+    async def register_consul(self, loop):
+        while True:
+            c = consul.aio.Consul(
+                host=self.context.consul_host,
+                port=self.context.consul_port, loop=loop)
+
+            logging.info(
+                "Registering application %s in Consul" % self.name)
+
+            response = await c.kv.put("applications/%s" % self.name, "UP")
+            if response is True:
+                logging.info("Application %s registered in Consul" % self.name)
+                return
+            else:
+                logging.error("Error while registering application %s" %
+                              self.name)
+
+            await asyncio.sleep(5)
+
+    async def register_ari(self, asterisk_id):
         while True:
             # NOTE this will change in order to make a call toward consul
             response = None
