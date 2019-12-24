@@ -6,6 +6,9 @@ import logging
 import json
 import yaml
 import consul.aio
+import os
+import uvicorn
+from fastapi import FastAPI
 
 RECONNECT_RATE = 1
 
@@ -15,6 +18,9 @@ logger = logging.getLogger(__name__)
 class Context:
 
     def __init__(self):
+        self.addr = "127.0.0.1"
+        self.port = 8000
+
         self.api_endpoint = "http://localhost:8088"
         self.api_username = "wazo"
         self.api_password = "wazo"
@@ -27,22 +33,35 @@ class Context:
 
         self.consul_host = "127.0.0.1"
         self.consul_port = 8500
+        self.consul_check = None
 
     def from_conf(self, conf="app.yml"):
-        doc = yaml.load(conf)
+        doc = {}
+        if os.path.isfile(conf):
+            with open(conf) as f:
+                doc = yaml.load(f, Loader=yaml.FullLoader)
 
-        self.api_endpoint = doc.api.api_endpoint
-        self.api_username = doc.api.username
-        self.api_password = doc.api.password
+        self.addr = doc.get('address', self.addr)
+        self.port = doc.get('port', self.port)
 
-        self.amqp_host = doc.amqp.host
-        self.amqp_port = doc.amqp.port
-        self.amqp_username = doc.amqp.username
-        self.amqp_password = doc.amqp.password
-        self.amqp_exchange = doc.amqp.exchange
+        api = doc.get('api')
+        if api:
+            self.api_endpoint = api.get('endpoint')
+            self.api_username = api.get('username')
+            self.api_password = api.get('password')
 
-        self.consul_host = doc.consul.host
-        self.consul_port = doc.consul.port
+        amqp = doc.get('amqp')
+        if amqp:
+            self.amqp_host = amqp.get('host')
+            self.amqp_port = amqp.get('port')
+            self.amqp_username = amqp.get('username')
+            self.amqp_password = amqp.get('password')
+            self.amqp_exchange = amqp.get('exchange')
+
+        consul = doc.get('consul')
+        if consul:
+            self.consul_host = consul.get('host')
+            self.consul_port = consul.get('port')
 
 
 class Channel:
@@ -82,9 +101,12 @@ class Consumer:
 
 class Application:
 
-    def __init__(self, context, name):
+    def __init__(self, context, id, name):
         self.context = context
+        self.id = id
         self.name = name
+
+        self.fastapi = FastAPI()
 
     def launch(self):
         loop = asyncio.get_event_loop()
@@ -95,10 +117,10 @@ class Application:
             self.process_msgs(queue))
         register_task = loop.create_task(self.register_loop(loop))
 
-        app_task = loop.create_task(self.run())
+        api_task = loop.create_task(self.run_api())
 
         try:
-            loop.run_until_complete(app_task)
+            loop.run_until_complete(api_task)
         finally:
             register_task.cancel()
             reconnect_task.cancel()
@@ -109,6 +131,22 @@ class Application:
             loop.run_until_complete(process_msgs_task)
 
             loop.close()
+
+    async def run_api(self):
+        try:
+            self.fastapi.get("/status")(self.status)
+
+            config = uvicorn.Config(self.fastapi,
+                                    host=self.context.addr, port=self.context.port)
+
+            server = uvicorn.Server(config)
+
+            await server.serve()
+        except asyncio.CancelledError:
+            pass
+
+    async def status(self):
+        return {'state': 'ok'}
 
     async def connect_and_consume(self, queue):
         connection = await asynqp.connect(
@@ -228,21 +266,44 @@ class Application:
             pass
 
     async def register_consul(self, loop):
+        c = consul.aio.Consul(
+            host=self.context.consul_host,
+            port=self.context.consul_port, loop=loop)
         while True:
-            c = consul.aio.Consul(
-                host=self.context.consul_host,
-                port=self.context.consul_port, loop=loop)
-
             logging.info(
                 "Registering application %s in Consul" % self.name)
+            try:
+                response = await c.kv.put("applications/%s" % self.name, "UP")
+                if response is not True:
+                    raise Exception("error",
+                                    "registering application %s" % self.name)
 
-            response = await c.kv.put("applications/%s" % self.name, "UP")
-            if response is True:
-                logging.info("Application %s registered in Consul" % self.name)
+                response = await c.agent.service.register(
+                    self.name, service_id=self.id,
+                    address=self.context.addr, port=self.context.port,
+                )
+                if response is not True:
+                    raise Exception("error",
+                                    "registering service %s" % self.name)
+
+                status_url = "http://%s:%d/status" % (
+                    self.context.addr, self.context.port)
+                response = await c.agent.check.register(
+                    self.name, consul.Check.http(status_url, '5s'),
+                    service_id=self.id)
+                if response is not True:
+                    raise Exception("error",
+                                    "registering check %s" % self.name)
+
+                logging.info(
+                    "Service check %s registered in Consul" % self.name)
+                # TODO waiting for a new version of python consul to
+                # get the coroutine then return await c.close()
+                c.close()
+
                 return
-            else:
-                logging.error("Error while registering application %s" %
-                              self.name)
+            except Exception as e:
+                logging.error("Consul error: %s", e)
 
             await asyncio.sleep(5)
 

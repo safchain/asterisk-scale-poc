@@ -1,8 +1,6 @@
 import asyncio
 import logging
 import json
-import uvicorn
-from fastapi import FastAPI
 from starlette.responses import Response
 from gtts import gTTS
 import argparse
@@ -18,29 +16,19 @@ logger = logging.getLogger(__name__)
 
 class HelloApplication(Application):
 
-    def __init__(self, context, name, addr, port=8080, data_dir='/tmp/astts'):
-        super().__init__(context, "hello")
+    def __init__(self, context, id, name, data_dir='/tmp/astts'):
+        super().__init__(context, id, "hello")
 
-        self.addr = addr
-        self.port = port
         self.data_dir = data_dir
 
         self.speak_task = None
 
-    async def run(self):
-        try:
-            app = FastAPI()
-
-            app.get("/say")(self.say)
-
-            config = uvicorn.Config(app, host=self.addr, port=self.port)
-            server = uvicorn.Server(config)
-
-            await server.serve()
-        except asyncio.CancelledError:
-            pass
+        self.fastapi.get("/say")(self.say)
 
     async def say(self, text=""):
+        if not text:
+            return
+
         try:
             os.makedirs(self.data_dir)
         except OSError as e:
@@ -103,7 +91,7 @@ class HelloApplication(Application):
 
             sub_id = asterisk_id.split(":")[-1]
 
-            endpoint = "http://%s:%d" % (self.addr, self.port)
+            endpoint = "http://%s:%d" % (self.context.addr, self.context.port)
             text = ('Your%2Bare%2Bconnected%2B'
                     'to%2BAsterisk%2Bnumber%2B' + sub_id)
 
@@ -123,6 +111,8 @@ class HelloApplication(Application):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--id",
+                        help="unique id for this app instance")
     parser.add_argument("--api-gateway", default="http://localhost:8888",
                         help="http://<IP>:<Port>")
     parser.add_argument("--addr", default="127.0.0.1",
@@ -140,8 +130,17 @@ def main():
     if args.conf:
         context.from_conf(args.conf)
 
-    app = HelloApplication(context, "hello", args.addr,
-                           args.port, args.data_dir)
+    id = os.getenv("ID")
+    if not id:
+        id = args.id if args.id else "hello"
+
+    if args.addr:
+        context.addr = args.addr
+
+    if args.port:
+        context.port = args.port
+
+    app = HelloApplication(context, id, "hello", args.data_dir)
     app.launch()
 
 
