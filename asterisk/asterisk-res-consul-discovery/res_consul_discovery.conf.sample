@@ -2,11 +2,8 @@
 enabled=true
 
 [consul]
-id=auto ;set id or auto to generate it
+id=asterisk ;set id or auto to generate it, or asterisk to use the asterisk ID
 name=asterisk ;set name or auto to discovery with hostname
-host=consul
-port=8500
-token=the_one_ring
 tags=asterisk
 discovery_ip=auto ;set ip or auto to discovery the ip
 discovery_port=5060
