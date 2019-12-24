@@ -26,6 +26,8 @@ class HelloApplication(Application):
         self.fastapi.get("/say")(self.say)
 
     async def say(self, text=""):
+        text = text.rstrip('.wav')
+
         if not text:
             return
 
@@ -91,12 +93,12 @@ class HelloApplication(Application):
 
             sub_id = asterisk_id.split(":")[-1]
 
-            endpoint = "http://%s:%d" % (self.context.addr, self.context.port)
+            endpoint = "http://%s:%d" % (self.context.host, self.context.port)
             text = ('Your%2Bare%2Bconnected%2B'
                     'to%2BAsterisk%2Bnumber%2B' + sub_id)
 
             url = ("/ari/channels/%s/play?media=sound:"
-                   "%s/say?text=%s") % (channel.id, endpoint, text)
+                   "%s/say?text=%s.wav") % (channel.id, endpoint, text)
 
             response = await self.request(asterisk_id, url)
             if response.status <= 299:
@@ -112,13 +114,15 @@ class HelloApplication(Application):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--id",
+                        default=os.environ.get('ID', 'hello'),
                         help="unique id for this app instance")
-    parser.add_argument("--api-gateway", default="http://localhost:8888",
+    parser.add_argument("--api-gateway",
+                        default=os.environ.get('API', 'http://127.0.0.1:8888'),
                         help="http://<IP>:<Port>")
-    parser.add_argument("--addr", default="127.0.0.1",
+    parser.add_argument("--host",
                         help="local address that Asterisk can reach")
-    parser.add_argument("--port", default="8000", type=int,
-                        help="local port that Asterisk can reach")
+    parser.add_argument("--port",
+                        type=int, help="local port that Asterisk can reach")
     parser.add_argument("--conf", default="",
                         help="application config file")
     parser.add_argument("--data-dir", default="/tmp/astts",
@@ -130,17 +134,12 @@ def main():
     if args.conf:
         context.from_conf(args.conf)
 
-    id = os.getenv("ID")
-    if not id:
-        id = args.id if args.id else "hello"
-
-    if args.addr:
-        context.addr = args.addr
-
+    if args.host:
+        context.host = args.host
     if args.port:
         context.port = args.port
 
-    app = HelloApplication(context, id, "hello", args.data_dir)
+    app = HelloApplication(context, args.id, "hello", args.data_dir)
     app.launch()
 
 

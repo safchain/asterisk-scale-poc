@@ -8,6 +8,7 @@ services:
     links:
       - consul
       - rabbitmq
+      - apps
     expose:
       - 8888/tcp
     volumes:
@@ -45,6 +46,21 @@ services:
       - 5060:5060/udp
     expose:
       - 5060/udp
+  apps:
+    build: ./apps
+    links:
+      - consul
+      - api-gateway
+      - rabbitmq
+    expose:
+      - 8000/tcp
+    ports:
+      - 8000:8000/tcp
+    environment:
+      - API_ENDPOINT=http://api-gateway
+      - AMQP_HOST=rabbitmq
+      - CONSUL_HOST=consul
+      - APP_HOST=apps
 
 networks:
     default:
