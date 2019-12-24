@@ -125,18 +125,15 @@ class Application:
         reconnect_task = loop.create_task(self.reconnector(loop, queue))
         process_msgs_task = loop.create_task(
             self.process_msgs(queue))
-        register_task = loop.create_task(self.register_loop(loop))
 
         api_task = loop.create_task(self.run_api())
 
         try:
             loop.run_until_complete(api_task)
         finally:
-            register_task.cancel()
             reconnect_task.cancel()
             process_msgs_task.cancel()
 
-            loop.run_until_complete(register_task)
             loop.run_until_complete(reconnect_task)
             loop.run_until_complete(process_msgs_task)
 
@@ -231,31 +228,6 @@ class Application:
                         await callback(asterisk_id, channel)
 
                 msg.ack()
-        except asyncio.CancelledError:
-            pass
-
-    async def register_loop(self, loop):
-        try:
-            c = consul.aio.Consul(
-                host=self.context.consul_host,
-                port=self.context.consul_port, loop=loop)
-
-            while True:
-                eids = []
-
-                (_, nodes) = await c.health.service("asterisk")
-                for node in nodes:
-                    service = node.get("Service", {})
-                    meta = service.get("Meta", {})
-                    eid = meta.get("eid")
-
-                    if eid:
-                        eids.append(eid)
-
-                for eid in eids:
-                    await self.register_ari(eid)
-
-                await asyncio.sleep(5)
         except asyncio.CancelledError:
             pass
 
