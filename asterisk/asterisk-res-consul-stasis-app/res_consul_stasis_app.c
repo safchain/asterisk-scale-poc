@@ -71,17 +71,14 @@
 static char asterisk_eid[18];
 struct ao2_container *registered_apps = NULL;
 
-static void stasis_amqp_message_handler(void *data, const char *app_name, struct ast_json *message)
-{
-	char *str = ast_json_dump_string(message);
-	ast_log(LOG_NOTICE, "called stasis amqp handler for application: '%s' => %s\n", app_name, str);
-	ast_json_free(str);
-	return;
-}
+// NOTE(safchain) need to place this is the res_stasis_amqp
+// side note, do we want a strong dependency between consul
+// and amqp ?
+int ast_subscribe_to_stasis(const char *app_name);
 
 static int register_application(const char* app) {
 	const char *tags[2] = { asterisk_eid, NULL };
-	int res = stasis_app_register(app, &stasis_amqp_message_handler, NULL);
+	int res = ast_subscribe_to_stasis(app);
 	if (!res) {
 		ast_log(LOG_NOTICE, "application %s registered\n", app);
 		ast_consul_service_register(
@@ -122,8 +119,11 @@ static int consul_watch_callback(int app_count, const char **applications) {
 		void *result = ao2_find(existing_apps, app_name, OBJ_UNLINK | OBJ_SEARCH_KEY);
 		ast_log(LOG_NOTICE, "searched for %s in existing app => %p\n", app_name, result);
 		if (!result) {
-			if (!register_application(app_name)) {
-				ast_str_container_add(registered_apps, app_name);
+			// NOTE(safchain) quick fix need something cleaner to remove prefix
+			if (strncmp(app_name, "applications/", 13) == 0) {
+				if (!register_application(app_name + 13)) {
+					ast_str_container_add(registered_apps, app_name);
+				}
 			}
 		}
 	}
@@ -196,5 +196,6 @@ AST_MODULE_INFO(ASTERISK_GPL_KEY, AST_MODFLAG_DEFAULT, "Asterisk Statis applicat
 	.load = load_module,
 	.unload = unload_module,
 	.reload = reload_module,
-	.requires = "res_stasis",
+	.load_pri = AST_MODPRI_APP_DEPEND,
+	.requires = "res_stasis_amqp",
 );
