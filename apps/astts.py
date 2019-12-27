@@ -27,7 +27,7 @@ class AsttsApplication(Application):
 
         self.data_dir = data_dir
 
-        self.speak_task = None
+        self.tts_tasks = dict()
 
         self.fastapi.get("/say")(self.say)
 
@@ -65,19 +65,21 @@ class AsttsApplication(Application):
         logging.info(
             "Starting application on channel %s:%s" %
             (asterisk_id, channel.id))
-        asyncio.create_task(self.answer(asterisk_id, channel))
+        await self.answer(asterisk_id, channel)
 
     async def onEnd(self, asterisk_id, channel):
         logging.info(
             "End of application on channel %s:%s" % (asterisk_id, channel.id))
 
-        if self.speak_task:
-            self.speak_task.cancel()
-            self.speak_task = None
+        task = self.tts_tasks[channel.id]
+        if task:
+            task.cancel()
+            self.tts_tasks.pop(channel.id)
 
     async def onUp(self, asterisk_id, channel):
-        self.speak_task = asyncio.create_task(
+        task = asyncio.create_task(
             self.say_asterisk_id(asterisk_id, channel))
+        self.tts_tasks[channel.id] = task
 
     async def say_asterisk_id(self, asterisk_id, channel):
         while True:
@@ -103,6 +105,7 @@ class AsttsApplication(Application):
             except ApiException as e:
                 logging.error("Error while saiying something %s : %s" % (
                     channel.id, e))
+                return
 
             await asyncio.sleep(5)
 
