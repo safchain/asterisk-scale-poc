@@ -9,22 +9,37 @@ RUN apt-key add wazo_current.key
 RUN apt-get update
 RUN apt-get -y install asterisk asterisk-dev librabbitmq-dev make gcc libcurl4-openssl-dev \
     git jq wazo-res-stasis-amqp wazo-res-amqp asterisk-sounds-main strace net-tools lsof \
-    procps vim
+    procps vim libjansson-dev
 
 # clean up previous conf
 RUN rm -rf /etc/asterisk/*
 
 # Install Asterisk consul module
-WORKDIR /usr/src
-run git clone https://github.com/sboily/asterisk-consul-module
-WORKDIR /usr/src/asterisk-consul-module
+ADD asterisk-res-consul /usr/src/asterisk-res-consul
+WORKDIR /usr/src/asterisk-res-consul
 RUN CFLAGS=-g make
+RUN make clean
 RUN make install
 RUN make samples
 
+# Install Asterisk consul discovery module
+ADD asterisk-res-consul-discovery /usr/src/asterisk-res-consul-discovery
+WORKDIR /usr/src/asterisk-res-consul-discovery
+RUN CFLAGS=-g make
+RUN make clean
+RUN make install
+RUN make samples
+
+# Install Asterisk consul app module
+ADD asterisk-res-consul-stasis-app /usr/src/asterisk-res-consul-stasis-app
+WORKDIR /usr/src/asterisk-res-consul-stasis-app
+RUN make clean
+RUN CFLAGS=-g make
+RUN make install
+
 # Patch AMQP stasis module
 WORKDIR /usr/src
-run git clone https://github.com/wazo-platform/wazo-res-stasis-amqp
+RUN git clone https://github.com/wazo-platform/wazo-res-stasis-amqp
 WORKDIR /usr/src/wazo-res-stasis-amqp
 RUN cp amqp.json /usr/share/asterisk/rest-api
 RUN bin/patch_ari_resources.sh

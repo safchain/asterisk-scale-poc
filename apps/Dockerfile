@@ -6,7 +6,10 @@ RUN apt-get -y install sox libsox-fmt-mp3
 ADD app.py /apps/
 ADD astts.py /apps/
 ADD requirements.txt /apps/
+ADD api-docs /apps/api-docs
+ADD ari /apps/ari
 
-RUN pip install -r /apps/requirements.txt
+WORKDIR /apps
+RUN pip install -r requirements.txt
 
 CMD python /apps/astts.py
