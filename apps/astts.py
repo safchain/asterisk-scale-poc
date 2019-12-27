@@ -8,16 +8,22 @@ import os
 import errno
 import hashlib
 import os.path
+import urllib.parse
+import swagger_client
+from swagger_client.rest import ApiException
 
 from app import Application, Context
 
 logger = logging.getLogger(__name__)
 
 
-class HelloApplication(Application):
+APP_NAME = "astts"
+
+
+class AsttsApplication(Application):
 
     def __init__(self, context, id, name, data_dir='/tmp/astts'):
-        super().__init__(context, id, "hello")
+        super().__init__(context, id, name)
 
         self.data_dir = data_dir
 
@@ -73,18 +79,6 @@ class HelloApplication(Application):
         self.speak_task = asyncio.create_task(
             self.say_asterisk_id(asterisk_id, channel))
 
-    async def say_hello(self, asterisk_id, channel):
-        while True:
-            logging.info("Going to say hello to channel %s" % channel.id)
-            url = "/ari/channels/%s/play?media=sound:hello-world" % channel.id
-            response = await self.request(asterisk_id, url)
-            if response.status <= 299:
-                logging.info("Said hello on channel %s" % channel.id)
-            else:
-                logging.error("Error while saiying hello %s : %s" % (
-                    channel.id, response.reason))
-            await asyncio.sleep(5)
-
     async def say_asterisk_id(self, asterisk_id, channel):
         while True:
             logging.info(
@@ -93,28 +87,30 @@ class HelloApplication(Application):
 
             sub_id = asterisk_id.split(":")[-1]
 
+            text = "Your are connected to Asterisk number %s" % sub_id
+
             endpoint = "http://%s:%d" % (self.context.host, self.context.port)
-            text = ('Your%2Bare%2Bconnected%2B'
-                    'to%2BAsterisk%2Bnumber%2B' + sub_id)
+            uri = "sound:%s/say?text=%s.wav" % (endpoint,
+                                                urllib.parse.quote(text))
 
-            url = ("/ari/channels/%s/play?media=sound:"
-                   "%s/say?text=%s.wav") % (channel.id, endpoint, text)
+            try:
+                channels_api = swagger_client.ChannelsApi(self.api_client)
+                await channels_api.channels_channel_id_play_post(
+                    channel.id, [uri], x_asterisk_id=asterisk_id)
 
-            response = await self.request(asterisk_id, url)
-            if response.status <= 299:
-                logging.info(
-                    "Said hello on channel %s:%s" %
-                    (asterisk_id, channel.id))
-            else:
-                logging.error("Error while saiying hello %s : %s" % (
-                    channel.id, response.reason))
+                logging.info("Said something on channel %s:%s" %
+                             (asterisk_id, channel.id))
+            except ApiException as e:
+                logging.error("Error while saiying something %s : %s" % (
+                    channel.id, e))
+
             await asyncio.sleep(5)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--id",
-                        default=os.environ.get('ID', 'hello'),
+                        default=os.environ.get('ID', APP_NAME),
                         help="unique id for this app instance")
     parser.add_argument("--api-gateway",
                         default=os.environ.get('API', 'http://127.0.0.1:8888'),
@@ -139,7 +135,7 @@ def main():
     if args.port:
         context.port = args.port
 
-    app = HelloApplication(context, args.id, "hello", args.data_dir)
+    app = AsttsApplication(context, args.id, APP_NAME, args.data_dir)
     app.launch()
 
 

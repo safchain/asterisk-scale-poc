@@ -9,6 +9,9 @@ import consul.aio
 import os
 import uvicorn
 from fastapi import FastAPI
+import swagger_client
+from swagger_client import Configuration
+from swagger_client.rest import ApiException
 
 RECONNECT_RATE = 1
 
@@ -107,6 +110,13 @@ class Application:
         self.name = name
 
         self.fastapi = FastAPI()
+
+        configuration = Configuration()
+        configuration.host = "%s/ari" % context.api_endpoint
+        configuration.username = context.api_username
+        configuration.password = context.api_password
+
+        self.api_client = swagger_client.ApiClient(configuration)
 
     def launch(self):
         loop = asyncio.get_event_loop()
@@ -224,22 +234,6 @@ class Application:
         except asyncio.CancelledError:
             pass
 
-    async def request(self, asterisk_id, path):
-        headers = {'X-Asterisk-ID': asterisk_id}
-        url = "%s%s" % (self.context.api_endpoint, path)
-
-        logging.debug("Sending request to %s : %s" % (asterisk_id, url))
-
-        return await self.post(url, headers=headers)
-
-    async def post(self, url, headers={}):
-        auth = aiohttp.BasicAuth(
-            login=self.context.api_username,
-            password=self.context.api_password)
-        async with aiohttp.ClientSession(auth=auth) as session:
-            async with session.post(url, headers=headers) as response:
-                return response
-
     async def register_loop(self, loop):
         try:
             c = consul.aio.Consul(
@@ -310,36 +304,37 @@ class Application:
     async def register_ari(self, asterisk_id):
         while True:
             # NOTE this will change in order to make a call toward consul
-            response = None
             if asterisk_id:
                 logging.info(
                     "Registering application %s on %s" %
                     (self.name, asterisk_id))
-                response = await self.request(
-                    asterisk_id, "/ari/amqp/%s" % self.name)
             else:
                 logging.info("Registering application %s" % self.name)
-                response = await self.post(
-                    "%s/ari/amqp/%s" % (self.context.api_endpoint, self.name))
 
-            if response.status <= 299:
-                logging.info("Application %s registered" % self.name)
-                return
-            else:
+            try:
+                amqp_api = swagger_client.AmqpApi(self.api_client)
+                await amqp_api.amqp_app_name_post(
+                    self.name, x_asterisk_id=asterisk_id)
+
+                logging.info("Registered application %s" % self.name)
+            except ApiException as e:
                 logging.error("Error while registering application %s : %s" % (
-                    self.name, response.reason))
+                    self.name, e))
 
             await asyncio.sleep(5)
 
     async def answer(self, asterisk_id, channel):
         logging.info("Answering call on channel : %s" % channel.id)
-        response = await self.request(
-            asterisk_id, "/ari/channels/%s/answer" % channel.id)
-        if response.status <= 299:
+
+        try:
+            channels_api = swagger_client.ChannelsApi(self.api_client)
+            await channels_api.channels_channel_id_answer_post(
+                channel.id, x_asterisk_id=asterisk_id)
+
             logging.info("Answered channel %s successful" % channel.id)
-        else:
+        except ApiException as e:
             logging.error("Error while answering channel %s : %s" % (
-                channel.id, response.reason))
+                channel.id, e))
 
     def run(self):
         pass

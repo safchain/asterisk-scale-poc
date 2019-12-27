@@ -6,3 +6,4 @@ uvicorn
 gTTS
 pyyaml
 python-consul
+-e ./ari
