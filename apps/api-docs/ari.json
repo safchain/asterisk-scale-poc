@@ -1,0 +1,5942 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "localhost:8088",
+    "version": "4.0.2"
+  },
+  "host": "localhost:8088",
+  "basePath": "/ari",
+  "schemes": [
+    "http"
+  ],
+  "securityDefinitions": {
+    "basicAuth": {
+      "type": "basic"
+    }
+  },
+  "security": [
+    {
+      "basicAuth": []
+    }
+  ],
+  "parameters": {
+    "asteriskID": {
+      "in": "header",
+      "name": "X-Asterisk-ID",
+      "type": "string",
+      "required": false,
+      "description": "Asterisk ID used to route the request through the API Gateway"
+    }
+  },
+  "paths": {
+    "/applications": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Application"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "applications"
+        ],
+        "summary": "List all applications."
+      }
+    },
+    "/applications/{applicationName}": {
+      "get": {
+        "parameters": [
+          {
+            "description": "Application's name",
+            "in": "path",
+            "name": "applicationName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Application"
+            }
+          }
+        },
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get details of an application."
+      }
+    },
+    "/applications/{applicationName}/eventFilter": {
+      "put": {
+        "parameters": [
+          {
+            "description": "Application's name",
+            "in": "path",
+            "name": "applicationName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Specify which event types to allow/disallow",
+            "in": "body",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Application"
+            }
+          }
+        },
+        "tags": [
+          "applications"
+        ],
+        "description": "Allowed and/or disallowed event type filtering can be done. The body (parameter) should specify a JSON key/value object that describes the type of event filtering needed. One, or both of the following keys can be designated:<br /><br />\"allowed\" - Specifies an allowed list of event types<br />\"disallowed\" - Specifies a disallowed list of event types<br /><br />Further, each of those key's value should be a JSON array that holds zero, or more JSON key/value objects. Each of these objects must contain the following key with an associated value:<br /><br />\"type\" - The type name of the event to filter<br /><br />The value must be the string name (case sensitive) of the event type that needs filtering. For example:<br /><br />{ \"allowed\": [ { \"type\": \"StasisStart\" }, { \"type\": \"StasisEnd\" } ] }<br /><br />As this specifies only an allowed list, then only those two event type messages are sent to the application. No other event messages are sent.<br /><br />The following rules apply:<br /><br />* If the body is empty, both the allowed and disallowed filters are set empty.<br />* If both list types are given then both are set to their respective values (note, specifying an empty array for a given type sets that type to empty).<br />* If only one list type is given then only that type is set. The other type is not updated.<br />* An empty \"allowed\" list means all events are allowed.<br />* An empty \"disallowed\" list means no events are disallowed.<br />* Disallowed events take precedence over allowed events if the event type is specified in both lists.",
+        "summary": "Filter application events types."
+      }
+    },
+    "/applications/{applicationName}/subscription": {
+      "delete": {
+        "parameters": [
+          {
+            "description": "Application's name",
+            "in": "path",
+            "name": "applicationName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "URI for event source (channel:{channelId}, bridge:{bridgeId}, endpoint:{tech}[/{resource}], deviceState:{deviceName}",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "eventSource",
+            "required": true,
+            "type": "array"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Application"
+            }
+          }
+        },
+        "tags": [
+          "applications"
+        ],
+        "description": "Returns the state of the application after the subscriptions have changed",
+        "summary": "Unsubscribe an application from an event source."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Application's name",
+            "in": "path",
+            "name": "applicationName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "URI for event source (channel:{channelId}, bridge:{bridgeId}, endpoint:{tech}[/{resource}], deviceState:{deviceName}",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "eventSource",
+            "required": true,
+            "type": "array"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Application"
+            }
+          }
+        },
+        "tags": [
+          "applications"
+        ],
+        "description": "Returns the state of the application after the subscriptions have changed",
+        "summary": "Subscribe an application to a event source."
+      }
+    },
+    "/asterisk/config/dynamic/{configClass}/{objectType}/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "The configuration class containing dynamic configuration objects.",
+            "in": "path",
+            "name": "configClass",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The type of configuration object to delete.",
+            "in": "path",
+            "name": "objectType",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The unique identifier of the object to delete.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Delete a dynamic configuration object."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "The configuration class containing dynamic configuration objects.",
+            "in": "path",
+            "name": "configClass",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The type of configuration object to retrieve.",
+            "in": "path",
+            "name": "objectType",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The unique identifier of the object to retrieve.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Retrieve a dynamic configuration object."
+      },
+      "put": {
+        "parameters": [
+          {
+            "description": "The configuration class containing dynamic configuration objects.",
+            "in": "path",
+            "name": "configClass",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The type of configuration object to create or update.",
+            "in": "path",
+            "name": "objectType",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The unique identifier of the object to create or update.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The body object should have a value that is a list of ConfigTuples, which provide the fields to update. Ex. [ { \"attribute\": \"directmedia\", \"value\": \"false\" } ]",
+            "in": "body",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Create or update a dynamic configuration object."
+      }
+    },
+    "/asterisk/info": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Filter information returned",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "only",
+            "required": false,
+            "type": "array"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/AsteriskInfo"
+            }
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Gets Asterisk system information."
+      }
+    },
+    "/asterisk/logging": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/LogChannel"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Gets Asterisk log channel information."
+      }
+    },
+    "/asterisk/logging/{logChannelName}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Log channels name",
+            "in": "path",
+            "name": "logChannelName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Deletes a log channel."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "The log channel to add",
+            "in": "path",
+            "name": "logChannelName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "levels of the log channel",
+            "in": "query",
+            "name": "configuration",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Adds a log channel."
+      }
+    },
+    "/asterisk/logging/{logChannelName}/rotate": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "put": {
+        "parameters": [
+          {
+            "description": "Log channel's name",
+            "in": "path",
+            "name": "logChannelName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Rotates a log channel."
+      }
+    },
+    "/asterisk/modules": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Module"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "List Asterisk modules."
+      }
+    },
+    "/asterisk/modules/{moduleName}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Module's name",
+            "in": "path",
+            "name": "moduleName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Unload an Asterisk module."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "Module's name",
+            "in": "path",
+            "name": "moduleName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Module"
+            }
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Get Asterisk module information."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Module's name",
+            "in": "path",
+            "name": "moduleName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Load an Asterisk module."
+      },
+      "put": {
+        "parameters": [
+          {
+            "description": "Module's name",
+            "in": "path",
+            "name": "moduleName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Reload an Asterisk module."
+      }
+    },
+    "/asterisk/ping": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/AsteriskPing"
+            }
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Response pong message."
+      }
+    },
+    "/asterisk/variable": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "The variable to get",
+            "in": "query",
+            "name": "variable",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Variable"
+            }
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Get the value of a global variable."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "The variable to set",
+            "in": "query",
+            "name": "variable",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The value to set the variable to",
+            "in": "query",
+            "name": "value",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "asterisk"
+        ],
+        "summary": "Set the value of a global variable."
+      }
+    },
+    "/bridges": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Bridge"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "List all active bridges in Asterisk."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Comma separated list of bridge type attributes (mixing, holding, dtmf_events, proxy_media, video_sfu).",
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Unique ID to give to the bridge being created.",
+            "in": "query",
+            "name": "bridgeId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Name to give to the bridge being created.",
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Bridge"
+            }
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "description": "This bridge persists until it has been shut down, or Asterisk has been shut down.",
+        "summary": "Create a new bridge."
+      }
+    },
+    "/bridges/{bridgeId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "description": "If any channels are in this bridge, they will be removed and resume whatever they were doing beforehand.",
+        "summary": "Shut down a bridge."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Bridge"
+            }
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "Get bridge details."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Comma separated list of bridge type attributes (mixing, holding, dtmf_events, proxy_media, video_sfu) to set.",
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Unique ID to give to the bridge being created.",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Set the name of the bridge.",
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Bridge"
+            }
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "description": "This bridge persists until it has been shut down, or Asterisk has been shut down.",
+        "summary": "Create a new bridge or updates an existing one."
+      }
+    },
+    "/bridges/{bridgeId}/addChannel": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Ids of channels to add to bridge",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "channel",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "description": "Channel's role in the bridge",
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": false,
+            "description": "Absorb DTMF coming from this channel, preventing it to pass through to the bridge",
+            "in": "query",
+            "name": "absorbDTMF",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "description": "Mute audio from this channel, preventing it to pass through to the bridge",
+            "in": "query",
+            "name": "mute",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "Add a channel to a bridge."
+      }
+    },
+    "/bridges/{bridgeId}/moh": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "description": "This will only stop music on hold being played via POST bridges/{bridgeId}/moh.",
+        "summary": "Stop playing music on hold to a bridge."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Channel's id",
+            "in": "query",
+            "name": "mohClass",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "Play music on hold to a bridge or change the MOH class that is playing."
+      }
+    },
+    "/bridges/{bridgeId}/play": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Media URIs to play.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "media",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "description": "For sounds, selects language for sound.",
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 0,
+            "description": "Number of milliseconds to skip before playing. Only applies to the first URI if multiple media URIs are specified.",
+            "format": "int32",
+            "in": "query",
+            "name": "offsetms",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 3000,
+            "description": "Number of milliseconds to skip for forward/reverse operations.",
+            "format": "int32",
+            "in": "query",
+            "name": "skipms",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "Playback Id.",
+            "in": "query",
+            "name": "playbackId",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Playback"
+            }
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "description": "The media URI may be any of a number of URI's. Currently sound:, recording:, number:, digits:, characters:, and tone: URI's are supported. This operation creates a playback resource that can be used to control the playback of media (pause, rewind, fast forward, etc.)",
+        "summary": "Start playback of media on a bridge."
+      }
+    },
+    "/bridges/{bridgeId}/play/{playbackId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Playback ID.",
+            "in": "path",
+            "name": "playbackId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Media URIs to play.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "media",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "description": "For sounds, selects language for sound.",
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 0,
+            "description": "Number of milliseconds to skip before playing. Only applies to the first URI if multiple media URIs are specified.",
+            "format": "int32",
+            "in": "query",
+            "name": "offsetms",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 3000,
+            "description": "Number of milliseconds to skip for forward/reverse operations.",
+            "format": "int32",
+            "in": "query",
+            "name": "skipms",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Playback"
+            }
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "description": "The media URI may be any of a number of URI's. Currently sound:, recording:, number:, digits:, characters:, and tone: URI's are supported. This operation creates a playback resource that can be used to control the playback of media (pause, rewind, fast forward, etc.)",
+        "summary": "Start playback of media on a bridge."
+      }
+    },
+    "/bridges/{bridgeId}/record": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Recording's filename",
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Format to encode audio in",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": 0,
+            "description": "Maximum duration of the recording, in seconds. 0 for no limit.",
+            "format": "int32",
+            "in": "query",
+            "name": "maxDurationSeconds",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 0,
+            "description": "Maximum duration of silence, in seconds. 0 for no limit.",
+            "format": "int32",
+            "in": "query",
+            "name": "maxSilenceSeconds",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": "fail",
+            "description": "Action to take if a recording with the same name already exists.",
+            "in": "query",
+            "name": "ifExists",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": false,
+            "description": "Play beep when recording begins",
+            "in": "query",
+            "name": "beep",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": "none",
+            "description": "DTMF input to terminate recording.",
+            "in": "query",
+            "name": "terminateOn",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/LiveRecording"
+            }
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "description": "This records the mixed audio from all channels participating in this bridge.",
+        "summary": "Start a recording."
+      }
+    },
+    "/bridges/{bridgeId}/removeChannel": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Ids of channels to remove from bridge",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "channel",
+            "required": true,
+            "type": "array"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "Remove a channel from a bridge."
+      }
+    },
+    "/bridges/{bridgeId}/variable": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The bridge variable or function to get",
+            "in": "query",
+            "name": "variable",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Variable"
+            }
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "Get the value of a bridge variable or function."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The bridge variable or function to set",
+            "in": "query",
+            "name": "variable",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The value to set the variable to",
+            "in": "query",
+            "name": "value",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "Set the value of a bridge variable or function."
+      }
+    },
+    "/bridges/{bridgeId}/videoSource": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "Removes any explicit video source in a multi-party mixing bridge. This operation has no effect on bridges with two or fewer participants. When no explicit video source is set, talk detection will be used to determine the active video stream."
+      }
+    },
+    "/bridges/{bridgeId}/videoSource/{channelId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Bridge's id",
+            "in": "path",
+            "name": "bridgeId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "bridges"
+        ],
+        "summary": "Set a channel as the video source in a multi-party mixing bridge. This operation has no effect on bridges with two or fewer participants."
+      }
+    },
+    "/channels": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Channel"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "List all active channels in Asterisk."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Endpoint to call.",
+            "in": "query",
+            "name": "endpoint",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The extension to dial after the endpoint answers. Mutually exclusive with 'app'.",
+            "in": "query",
+            "name": "extension",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The context to dial after the endpoint answers. If omitted, uses 'default'. Mutually exclusive with 'app'.",
+            "in": "query",
+            "name": "context",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The priority to dial after the endpoint answers. If omitted, uses 1. Mutually exclusive with 'app'.",
+            "format": "int64",
+            "in": "query",
+            "name": "priority",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "The label to dial after the endpoint answers. Will supersede 'priority' if provided. Mutually exclusive with 'app'.",
+            "in": "query",
+            "name": "label",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The application that is subscribed to the originated channel. When the channel is answered, it will be passed to this Stasis application. Mutually exclusive with 'context', 'extension', 'priority', and 'label'.",
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The application arguments to pass to the Stasis application provided by 'app'. Mutually exclusive with 'context', 'extension', 'priority', and 'label'.",
+            "in": "query",
+            "name": "appArgs",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "CallerID to use when dialing the endpoint or extension.",
+            "in": "query",
+            "name": "callerId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 30,
+            "description": "Timeout (in seconds) before giving up dialing, or -1 for no timeout.",
+            "format": "int32",
+            "in": "query",
+            "name": "timeout",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "The \"variables\" key in the body object holds variable key/value pairs to set on the channel on creation. Other keys in the body object are interpreted as query parameters. Ex. { \"endpoint\": \"SIP/Alice\", \"variables\": { \"CALLERID(name)\": \"Alice\" } }",
+            "in": "body",
+            "name": "variables",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "The unique id to assign the channel on creation.",
+            "in": "query",
+            "name": "channelId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The unique id to assign the second channel when using local channels.",
+            "in": "query",
+            "name": "otherChannelId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The unique id of the channel which is originating this one.",
+            "in": "query",
+            "name": "originator",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The format name capability list to use if originator is not specified. Ex. \"ulaw,slin16\".  Format names can be found with \"core show codecs\".",
+            "in": "query",
+            "name": "formats",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "The new channel is created immediately and a snapshot of it returned. If a Stasis application is provided it will be automatically subscribed to the originated channel for further events and updates.",
+        "summary": "Create a new channel (originate)."
+      }
+    },
+    "/channels/create": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Endpoint for channel communication",
+            "in": "query",
+            "name": "endpoint",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Stasis Application to place channel into",
+            "in": "query",
+            "name": "app",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The application arguments to pass to the Stasis application provided by 'app'. Mutually exclusive with 'context', 'extension', 'priority', and 'label'.",
+            "in": "query",
+            "name": "appArgs",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The unique id to assign the channel on creation.",
+            "in": "query",
+            "name": "channelId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The unique id to assign the second channel when using local channels.",
+            "in": "query",
+            "name": "otherChannelId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Unique ID of the calling channel",
+            "in": "query",
+            "name": "originator",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The format name capability list to use if originator is not specified. Ex. \"ulaw,slin16\".  Format names can be found with \"core show codecs\".",
+            "in": "query",
+            "name": "formats",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Create channel."
+      }
+    },
+    "/channels/externalMedia": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "The unique id to assign the channel on creation.",
+            "in": "query",
+            "name": "channelId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Stasis Application to place channel into",
+            "in": "query",
+            "name": "app",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The \"variables\" key in the body object holds variable key/value pairs to set on the channel on creation. Other keys in the body object are interpreted as query parameters. Ex. { \"endpoint\": \"SIP/Alice\", \"variables\": { \"CALLERID(name)\": \"Alice\" } }",
+            "in": "body",
+            "name": "variables",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Hostname/ip:port of external host",
+            "in": "query",
+            "name": "external_host",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": "rtp",
+            "description": "Payload encapsulation protocol",
+            "in": "query",
+            "name": "encapsulation",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": "udp",
+            "description": "Transport protocol",
+            "in": "query",
+            "name": "transport",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": "client",
+            "description": "Connection type (client/server)",
+            "in": "query",
+            "name": "connection_type",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Format to encode audio in",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": "both",
+            "description": "External media direction",
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/ExternalMedia"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "Create a channel to an External Media source/sink.",
+        "summary": "Start an External Media session."
+      }
+    },
+    "/channels/{channelId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Reason for hanging up the channel",
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Delete (i.e. hangup) a channel."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Channel details."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "The unique id to assign the channel on creation.",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Endpoint to call.",
+            "in": "query",
+            "name": "endpoint",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The extension to dial after the endpoint answers. Mutually exclusive with 'app'.",
+            "in": "query",
+            "name": "extension",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The context to dial after the endpoint answers. If omitted, uses 'default'. Mutually exclusive with 'app'.",
+            "in": "query",
+            "name": "context",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The priority to dial after the endpoint answers. If omitted, uses 1. Mutually exclusive with 'app'.",
+            "format": "int64",
+            "in": "query",
+            "name": "priority",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "The label to dial after the endpoint answers. Will supersede 'priority' if provided. Mutually exclusive with 'app'.",
+            "in": "query",
+            "name": "label",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The application that is subscribed to the originated channel. When the channel is answered, it will be passed to this Stasis application. Mutually exclusive with 'context', 'extension', 'priority', and 'label'.",
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The application arguments to pass to the Stasis application provided by 'app'. Mutually exclusive with 'context', 'extension', 'priority', and 'label'.",
+            "in": "query",
+            "name": "appArgs",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "CallerID to use when dialing the endpoint or extension.",
+            "in": "query",
+            "name": "callerId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 30,
+            "description": "Timeout (in seconds) before giving up dialing, or -1 for no timeout.",
+            "format": "int32",
+            "in": "query",
+            "name": "timeout",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "The \"variables\" key in the body object holds variable key/value pairs to set on the channel on creation. Other keys in the body object are interpreted as query parameters. Ex. { \"endpoint\": \"SIP/Alice\", \"variables\": { \"CALLERID(name)\": \"Alice\" } }",
+            "in": "body",
+            "name": "variables",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "The unique id to assign the second channel when using local channels.",
+            "in": "query",
+            "name": "otherChannelId",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The unique id of the channel which is originating this one.",
+            "in": "query",
+            "name": "originator",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The format name capability list to use if originator is not specified. Ex. \"ulaw,slin16\".  Format names can be found with \"core show codecs\".",
+            "in": "query",
+            "name": "formats",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "The new channel is created immediately and a snapshot of it returned. If a Stasis application is provided it will be automatically subscribed to the originated channel for further events and updates.",
+        "summary": "Create a new channel (originate with id)."
+      }
+    },
+    "/channels/{channelId}/answer": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Answer a channel."
+      }
+    },
+    "/channels/{channelId}/continue": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The context to continue to.",
+            "in": "query",
+            "name": "context",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The extension to continue to.",
+            "in": "query",
+            "name": "extension",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The priority to continue to.",
+            "format": "int32",
+            "in": "query",
+            "name": "priority",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "The label to continue to - will supersede 'priority' if both are provided.",
+            "in": "query",
+            "name": "label",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Exit application; continue execution in the dialplan."
+      }
+    },
+    "/channels/{channelId}/dial": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Channel ID of caller",
+            "in": "query",
+            "name": "caller",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 0,
+            "description": "Dial timeout",
+            "format": "int32",
+            "in": "query",
+            "name": "timeout",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Dial a created channel."
+      }
+    },
+    "/channels/{channelId}/dtmf": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "DTMF To send.",
+            "in": "query",
+            "name": "dtmf",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 0,
+            "description": "Amount of time to wait before DTMF digits (specified in milliseconds) start.",
+            "format": "int32",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 100,
+            "description": "Amount of time in between DTMF digits (specified in milliseconds).",
+            "format": "int32",
+            "in": "query",
+            "name": "between",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 100,
+            "description": "Length of each DTMF digit (specified in milliseconds).",
+            "format": "int32",
+            "in": "query",
+            "name": "duration",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 0,
+            "description": "Amount of time to wait after DTMF digits (specified in milliseconds) end.",
+            "format": "int32",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Send provided DTMF to a given channel."
+      }
+    },
+    "/channels/{channelId}/hold": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Remove a channel from hold."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Hold a channel."
+      }
+    },
+    "/channels/{channelId}/moh": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Stop playing music on hold to a channel."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Music on hold class to use",
+            "in": "query",
+            "name": "mohClass",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "Using media operations such as /play on a channel playing MOH in this manner will suspend MOH without resuming automatically. If continuing music on hold is desired, the stasis application must reinitiate music on hold.",
+        "summary": "Play music on hold to a channel."
+      }
+    },
+    "/channels/{channelId}/move": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The channel will be passed to this Stasis application.",
+            "in": "query",
+            "name": "app",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The application arguments to pass to the Stasis application provided by 'app'.",
+            "in": "query",
+            "name": "appArgs",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Move the channel from one Stasis application to another."
+      }
+    },
+    "/channels/{channelId}/mute": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": "both",
+            "description": "Direction in which to unmute audio",
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Unmute a channel."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": "both",
+            "description": "Direction in which to mute audio",
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Mute a channel."
+      }
+    },
+    "/channels/{channelId}/play": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Media URIs to play.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "media",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "description": "For sounds, selects language for sound.",
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Number of milliseconds to skip before playing. Only applies to the first URI if multiple media URIs are specified.",
+            "format": "int32",
+            "in": "query",
+            "name": "offsetms",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 3000,
+            "description": "Number of milliseconds to skip for forward/reverse operations.",
+            "format": "int32",
+            "in": "query",
+            "name": "skipms",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "Playback ID.",
+            "in": "query",
+            "name": "playbackId",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Playback"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "The media URI may be any of a number of URI's. Currently sound:, recording:, number:, digits:, characters:, and tone: URI's are supported. This operation creates a playback resource that can be used to control the playback of media (pause, rewind, fast forward, etc.)",
+        "summary": "Start playback of media."
+      }
+    },
+    "/channels/{channelId}/play/{playbackId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Playback ID.",
+            "in": "path",
+            "name": "playbackId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Media URIs to play.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "media",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "description": "For sounds, selects language for sound.",
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Number of milliseconds to skip before playing. Only applies to the first URI if multiple media URIs are specified.",
+            "format": "int32",
+            "in": "query",
+            "name": "offsetms",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 3000,
+            "description": "Number of milliseconds to skip for forward/reverse operations.",
+            "format": "int32",
+            "in": "query",
+            "name": "skipms",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Playback"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "The media URI may be any of a number of URI's. Currently sound:, recording:, number:, digits:, characters:, and tone: URI's are supported. This operation creates a playback resource that can be used to control the playback of media (pause, rewind, fast forward, etc.)",
+        "summary": "Start playback of media and specify the playbackId."
+      }
+    },
+    "/channels/{channelId}/record": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Recording's filename",
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Format to encode audio in",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": 0,
+            "description": "Maximum duration of the recording, in seconds. 0 for no limit",
+            "format": "int32",
+            "in": "query",
+            "name": "maxDurationSeconds",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": 0,
+            "description": "Maximum duration of silence, in seconds. 0 for no limit",
+            "format": "int32",
+            "in": "query",
+            "name": "maxSilenceSeconds",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": "fail",
+            "description": "Action to take if a recording with the same name already exists.",
+            "in": "query",
+            "name": "ifExists",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": false,
+            "description": "Play beep when recording begins",
+            "in": "query",
+            "name": "beep",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": "none",
+            "description": "DTMF input to terminate recording",
+            "in": "query",
+            "name": "terminateOn",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/LiveRecording"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "Record audio from a channel. Note that this will not capture audio sent to the channel. The bridge itself has a record feature if that's what you want.",
+        "summary": "Start a recording."
+      }
+    },
+    "/channels/{channelId}/redirect": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The endpoint to redirect the channel to",
+            "in": "query",
+            "name": "endpoint",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Redirect the channel to a different location."
+      }
+    },
+    "/channels/{channelId}/ring": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Stop ringing indication on a channel if locally generated."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Indicate ringing to a channel."
+      }
+    },
+    "/channels/{channelId}/rtp_statistics": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/RTPstat"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "RTP stats on a channel."
+      }
+    },
+    "/channels/{channelId}/silence": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Stop playing silence to a channel."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "Using media operations such as /play on a channel playing silence in this manner will suspend silence without resuming automatically.",
+        "summary": "Play silence to a channel."
+      }
+    },
+    "/channels/{channelId}/snoop": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": "none",
+            "description": "Direction of audio to spy on",
+            "in": "query",
+            "name": "spy",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": "none",
+            "description": "Direction of audio to whisper into",
+            "in": "query",
+            "name": "whisper",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Application the snooping channel is placed into",
+            "in": "query",
+            "name": "app",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The application arguments to pass to the Stasis application",
+            "in": "query",
+            "name": "appArgs",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Unique ID to assign to snooping channel",
+            "in": "query",
+            "name": "snoopId",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "Snoop (spy/whisper) on a specific channel.",
+        "summary": "Start snooping."
+      }
+    },
+    "/channels/{channelId}/snoop/{snoopId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Unique ID to assign to snooping channel",
+            "in": "path",
+            "name": "snoopId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": "none",
+            "description": "Direction of audio to spy on",
+            "in": "query",
+            "name": "spy",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": "none",
+            "description": "Direction of audio to whisper into",
+            "in": "query",
+            "name": "whisper",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Application the snooping channel is placed into",
+            "in": "query",
+            "name": "app",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The application arguments to pass to the Stasis application",
+            "in": "query",
+            "name": "appArgs",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "description": "Snoop (spy/whisper) on a specific channel.",
+        "summary": "Start snooping."
+      }
+    },
+    "/channels/{channelId}/variable": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The channel variable or function to get",
+            "in": "query",
+            "name": "variable",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Variable"
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Get the value of a channel variable or function."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "Channel's id",
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The channel variable or function to set",
+            "in": "query",
+            "name": "variable",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The value to set the variable to",
+            "in": "query",
+            "name": "value",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": false,
+            "description": "Set the variable even if the channel is not in Stasis application",
+            "in": "query",
+            "name": "bypassStasis",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "channels"
+        ],
+        "summary": "Set the value of a channel variable or function."
+      }
+    },
+    "/deviceStates": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/DeviceState"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "deviceStates"
+        ],
+        "summary": "List all ARI controlled device states."
+      }
+    },
+    "/deviceStates/{deviceName}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Name of the device",
+            "in": "path",
+            "name": "deviceName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "deviceStates"
+        ],
+        "summary": "Destroy a device-state controlled by ARI."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "Name of the device",
+            "in": "path",
+            "name": "deviceName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/DeviceState"
+            }
+          }
+        },
+        "tags": [
+          "deviceStates"
+        ],
+        "summary": "Retrieve the current state of a device."
+      },
+      "put": {
+        "parameters": [
+          {
+            "description": "Name of the device",
+            "in": "path",
+            "name": "deviceName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Device state value",
+            "in": "query",
+            "name": "deviceState",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "deviceStates"
+        ],
+        "summary": "Change the state of a device controlled by ARI. (Note - implicitly creates the device state)."
+      }
+    },
+    "/endpoints": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Endpoint"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "endpoints"
+        ],
+        "summary": "List all endpoints."
+      }
+    },
+    "/endpoints/sendMessage": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "put": {
+        "parameters": [
+          {
+            "description": "The endpoint resource or technology specific URI to send the message to. Valid resources are sip, pjsip, and xmpp.",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The endpoint resource or technology specific identity to send this message from. Valid resources are sip, pjsip, and xmpp.",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The body of the message",
+            "in": "query",
+            "name": "body",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "variables",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "endpoints"
+        ],
+        "summary": "Send a message to some technology URI or endpoint."
+      }
+    },
+    "/endpoints/{tech}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Technology of the endpoints (sip,iax2,...)",
+            "in": "path",
+            "name": "tech",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Endpoint"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "endpoints"
+        ],
+        "summary": "List available endoints for a given endpoint technology."
+      }
+    },
+    "/endpoints/{tech}/{resource}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Technology of the endpoint",
+            "in": "path",
+            "name": "tech",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "ID of the endpoint",
+            "in": "path",
+            "name": "resource",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Endpoint"
+            }
+          }
+        },
+        "tags": [
+          "endpoints"
+        ],
+        "summary": "Details for an endpoint."
+      }
+    },
+    "/endpoints/{tech}/{resource}/sendMessage": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "put": {
+        "parameters": [
+          {
+            "description": "Technology of the endpoint",
+            "in": "path",
+            "name": "tech",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "ID of the endpoint",
+            "in": "path",
+            "name": "resource",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The endpoint resource or technology specific identity to send this message from. Valid resources are sip, pjsip, and xmpp.",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The body of the message",
+            "in": "query",
+            "name": "body",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "variables",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "endpoints"
+        ],
+        "summary": "Send a message to some endpoint in a technology."
+      }
+    },
+    "/events": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Applications to subscribe to.",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "app",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "description": "Subscribe to all Asterisk events. If provided, the applications listed will be subscribed to all events, effectively disabling the application specific subscriptions. Default is 'false'.",
+            "in": "query",
+            "name": "subscribeAll",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Message"
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "summary": "WebSocket connection for events."
+      }
+    },
+    "/events/user/{eventName}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Event name",
+            "in": "path",
+            "name": "eventName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The name of the application that will receive this event",
+            "in": "query",
+            "name": "application",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "URI for event source (channel:{channelId}, bridge:{bridgeId}, endpoint:{tech}/{resource}, deviceState:{deviceName}",
+            "in": "query",
+            "items": {
+              "type": "string"
+            },
+            "name": "source",
+            "required": false,
+            "type": "array"
+          },
+          {
+            "description": "The \"variables\" key in the body object holds custom key/value pairs to add to the user event. Ex. { \"variables\": { \"key\": \"value\" } }",
+            "in": "body",
+            "name": "variables",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ConfigTuple"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "summary": "Generate a user event."
+      }
+    },
+    "/mailboxes": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Mailbox"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "mailboxes"
+        ],
+        "summary": "List all mailboxes."
+      }
+    },
+    "/mailboxes/{mailboxName}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Name of the mailbox",
+            "in": "path",
+            "name": "mailboxName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "mailboxes"
+        ],
+        "summary": "Destroy a mailbox."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "Name of the mailbox",
+            "in": "path",
+            "name": "mailboxName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Mailbox"
+            }
+          }
+        },
+        "tags": [
+          "mailboxes"
+        ],
+        "summary": "Retrieve the current state of a mailbox."
+      },
+      "put": {
+        "parameters": [
+          {
+            "description": "Name of the mailbox",
+            "in": "path",
+            "name": "mailboxName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Count of old messages in the mailbox",
+            "format": "int32",
+            "in": "query",
+            "name": "oldMessages",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "Count of new messages in the mailbox",
+            "format": "int32",
+            "in": "query",
+            "name": "newMessages",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "mailboxes"
+        ],
+        "summary": "Change the state of a mailbox. (Note - implicitly creates the mailbox)."
+      }
+    },
+    "/playbacks/{playbackId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "Playback's id",
+            "in": "path",
+            "name": "playbackId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "playbacks"
+        ],
+        "summary": "Stop a playback."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "Playback's id",
+            "in": "path",
+            "name": "playbackId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Playback"
+            }
+          }
+        },
+        "tags": [
+          "playbacks"
+        ],
+        "summary": "Get a playback's details."
+      }
+    },
+    "/playbacks/{playbackId}/control": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Playback's id",
+            "in": "path",
+            "name": "playbackId",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Operation to perform on the playback.",
+            "in": "query",
+            "name": "operation",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "playbacks"
+        ],
+        "summary": "Control a playback."
+      }
+    },
+    "/recordings/live/{recordingName}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Stop a live recording and discard it."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/LiveRecording"
+            }
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "List live recordings."
+      }
+    },
+    "/recordings/live/{recordingName}/mute": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Unmute a live recording."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "description": "Muting a recording suspends silence detection, which will be restarted when the recording is unmuted.",
+        "summary": "Mute a live recording."
+      }
+    },
+    "/recordings/live/{recordingName}/pause": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Unpause a live recording."
+      },
+      "post": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "description": "Pausing a recording suspends silence detection, which will be restarted when the recording is unpaused. Paused time is not included in the accounting for maxDurationSeconds.",
+        "summary": "Pause a live recording."
+      }
+    },
+    "/recordings/live/{recordingName}/stop": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Stop a live recording and store it."
+      }
+    },
+    "/recordings/stored": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/StoredRecording"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "List recordings that are complete."
+      }
+    },
+    "/recordings/stored/{recordingName}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "delete": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Delete a stored recording."
+      },
+      "get": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/StoredRecording"
+            }
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Get a stored recording's details."
+      }
+    },
+    "/recordings/stored/{recordingName}/copy": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "The name of the recording to copy",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The destination name of the recording",
+            "in": "query",
+            "name": "destinationRecordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/StoredRecording"
+            }
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Copy a stored recording."
+      }
+    },
+    "/recordings/stored/{recordingName}/file": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "The name of the recording",
+            "in": "path",
+            "name": "recordingName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "recordings"
+        ],
+        "summary": "Get the file associated with the stored recording."
+      }
+    },
+    "/sounds": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Lookup sound for a specific language.",
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Lookup sound in a specific format.",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Sound"
+              },
+              "type": "array"
+            }
+          }
+        },
+        "tags": [
+          "sounds"
+        ],
+        "summary": "List all sounds."
+      }
+    },
+    "/sounds/{soundId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Sound's id",
+            "in": "path",
+            "name": "soundId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified",
+            "schema": {
+              "$ref": "#/definitions/Sound"
+            }
+          }
+        },
+        "tags": [
+          "sounds"
+        ],
+        "summary": "Get a sound's details."
+      }
+    },
+    "/amqp/{appName}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/asteriskID"
+        }
+      ],
+      "post": {
+        "parameters": [
+          {
+            "description": "Application name",
+            "in": "path",
+            "name": "appName",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response was specified"
+          }
+        },
+        "tags": [
+          "amqp"
+        ],
+        "summary": "Register a stasis application"
+      }
+    }
+  },
+  "definitions": {
+    "Application": {
+      "description": "Details of a Stasis application",
+      "properties": {
+        "bridge_ids": {
+          "description": "Id's for bridges subscribed to.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "channel_ids": {
+          "description": "Id's for channels subscribed to.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "device_names": {
+          "description": "Names of the devices subscribed to.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "endpoint_ids": {
+          "description": "{tech}/{resource} for endpoints subscribed to.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "events_allowed": {
+          "description": "Event types sent to the application.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "events_disallowed": {
+          "description": "Event types not sent to the application.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Name of this application",
+          "type": "string"
+        }
+      },
+      "required": [
+        "bridge_ids",
+        "channel_ids",
+        "device_names",
+        "endpoint_ids",
+        "events_allowed",
+        "events_disallowed",
+        "name"
+      ]
+    },
+    "ApplicationMoveFailed": {
+      "allOf": [
+        {
+          "description": "Notification that trying to move a channel to another Stasis application failed.",
+          "properties": {
+            "args": {
+              "description": "Arguments to the application",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel"
+            },
+            "destination": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "args",
+            "channel",
+            "destination"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ApplicationReplaced": {
+      "allOf": [
+        {
+          "description": "Notification that another WebSocket has taken over for an application.\n\nAn application may only be subscribed to by a single WebSocket at a time. If multiple WebSockets attempt to subscribe to the same application, the newer WebSocket wins, and the older one receives this event."
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "AsteriskInfo": {
+      "description": "Asterisk system information",
+      "properties": {
+        "build": {
+          "$ref": "#/definitions/BuildInfo",
+          "description": "Info about how Asterisk was built"
+        },
+        "config": {
+          "$ref": "#/definitions/ConfigInfo",
+          "description": "Info about Asterisk configuration"
+        },
+        "status": {
+          "$ref": "#/definitions/StatusInfo",
+          "description": "Info about Asterisk status"
+        },
+        "system": {
+          "$ref": "#/definitions/SystemInfo",
+          "description": "Info about the system running Asterisk"
+        }
+      }
+    },
+    "AsteriskPing": {
+      "description": "Asterisk ping information",
+      "properties": {
+        "asterisk_id": {
+          "description": "Asterisk id info",
+          "type": "string"
+        },
+        "ping": {
+          "description": "Always string value is pong",
+          "type": "string"
+        },
+        "timestamp": {
+          "description": "The timestamp string of request received time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asterisk_id",
+        "ping",
+        "timestamp"
+      ]
+    },
+    "Bridge": {
+      "description": "The merging of media from one or more channels.\n\nEveryone on the bridge receives the same audio.",
+      "properties": {
+        "bridge_class": {
+          "description": "Bridging class",
+          "type": "string"
+        },
+        "bridge_type": {
+          "description": "Type of bridge technology",
+          "type": "string"
+        },
+        "bridgevars": {
+          "description": "Channel variables",
+          "type": "object"
+        },
+        "channels": {
+          "description": "Ids of channels participating in this bridge",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "creationtime": {
+          "description": "Timestamp when bridge was created",
+          "format": "date",
+          "type": "string"
+        },
+        "creator": {
+          "description": "Entity that created the bridge",
+          "type": "string"
+        },
+        "id": {
+          "description": "Unique identifier for this bridge",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name the creator gave the bridge",
+          "type": "string"
+        },
+        "technology": {
+          "description": "Name of the current bridging technology",
+          "type": "string"
+        },
+        "video_mode": {
+          "description": "The video mode the bridge is using. One of 'none', 'talker', or 'single'.",
+          "type": "string"
+        },
+        "video_source_id": {
+          "description": "The ID of the channel that is the source of video in this bridge, if one exists.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "bridge_class",
+        "bridge_type",
+        "channels",
+        "creationtime",
+        "creator",
+        "id",
+        "name",
+        "technology"
+      ]
+    },
+    "BridgeAttendedTransfer": {
+      "allOf": [
+        {
+          "description": "Notification that an attended transfer has occurred.",
+          "properties": {
+            "destination_application": {
+              "description": "Application that has been transferred into",
+              "type": "string"
+            },
+            "destination_bridge": {
+              "description": "Bridge that survived the merge result",
+              "type": "string"
+            },
+            "destination_link_first_leg": {
+              "$ref": "#/definitions/Channel",
+              "description": "First leg of a link transfer result"
+            },
+            "destination_link_second_leg": {
+              "$ref": "#/definitions/Channel",
+              "description": "Second leg of a link transfer result"
+            },
+            "destination_threeway_bridge": {
+              "$ref": "#/definitions/Bridge",
+              "description": "Bridge that survived the threeway result"
+            },
+            "destination_threeway_channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "Transferer channel that survived the threeway result"
+            },
+            "destination_type": {
+              "description": "How the transfer was accomplished",
+              "type": "string"
+            },
+            "is_external": {
+              "description": "Whether the transfer was externally initiated or not",
+              "type": "boolean"
+            },
+            "replace_channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that is replacing transferer_first_leg in the swap"
+            },
+            "result": {
+              "description": "The result of the transfer attempt",
+              "type": "string"
+            },
+            "transfer_target": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that is being transferred to"
+            },
+            "transferee": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that is being transferred"
+            },
+            "transferer_first_leg": {
+              "$ref": "#/definitions/Channel",
+              "description": "First leg of the transferer"
+            },
+            "transferer_first_leg_bridge": {
+              "$ref": "#/definitions/Bridge",
+              "description": "Bridge the transferer first leg is in"
+            },
+            "transferer_second_leg": {
+              "$ref": "#/definitions/Channel",
+              "description": "Second leg of the transferer"
+            },
+            "transferer_second_leg_bridge": {
+              "$ref": "#/definitions/Bridge",
+              "description": "Bridge the transferer second leg is in"
+            }
+          },
+          "required": [
+            "destination_type",
+            "is_external",
+            "result",
+            "transferer_first_leg",
+            "transferer_second_leg"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "BridgeBlindTransfer": {
+      "allOf": [
+        {
+          "description": "Notification that a blind transfer has occurred.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge",
+              "description": "The bridge being transferred"
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel performing the blind transfer"
+            },
+            "context": {
+              "description": "The context transferred to",
+              "type": "string"
+            },
+            "exten": {
+              "description": "The extension transferred to",
+              "type": "string"
+            },
+            "is_external": {
+              "description": "Whether the transfer was externally initiated or not",
+              "type": "boolean"
+            },
+            "replace_channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that is replacing transferer when the transferee(s) can not be transferred directly"
+            },
+            "result": {
+              "description": "The result of the transfer attempt",
+              "type": "string"
+            },
+            "transferee": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that is being transferred"
+            }
+          },
+          "required": [
+            "channel",
+            "context",
+            "exten",
+            "is_external",
+            "result"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "BridgeCreated": {
+      "allOf": [
+        {
+          "description": "Notification that a bridge has been created.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge"
+            }
+          },
+          "required": [
+            "bridge"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "BridgeDestroyed": {
+      "allOf": [
+        {
+          "description": "Notification that a bridge has been destroyed.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge"
+            }
+          },
+          "required": [
+            "bridge"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "BridgeMerged": {
+      "allOf": [
+        {
+          "description": "Notification that one bridge has merged into another.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge"
+            },
+            "bridge_from": {
+              "$ref": "#/definitions/Bridge"
+            }
+          },
+          "required": [
+            "bridge",
+            "bridge_from"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "BridgeVarset": {
+      "allOf": [
+        {
+          "description": "Bridge variable changed.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge",
+              "description": "The bridge on which the variable was set."
+            },
+            "value": {
+              "description": "The new value of the variable.",
+              "type": "string"
+            },
+            "variable": {
+              "description": "The variable that changed.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "value",
+            "variable"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "BridgeVideoSourceChanged": {
+      "allOf": [
+        {
+          "description": "Notification that the source of video in a bridge has changed.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge"
+            },
+            "old_video_source_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "bridge"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "BuildInfo": {
+      "description": "Info about how Asterisk was built",
+      "properties": {
+        "date": {
+          "description": "Date and time when Asterisk was built.",
+          "type": "string"
+        },
+        "kernel": {
+          "description": "Kernel version Asterisk was built on.",
+          "type": "string"
+        },
+        "machine": {
+          "description": "Machine architecture (x86_64, i686, ppc, etc.)",
+          "type": "string"
+        },
+        "options": {
+          "description": "Compile time options, or empty string if default.",
+          "type": "string"
+        },
+        "os": {
+          "description": "OS Asterisk was built on.",
+          "type": "string"
+        },
+        "user": {
+          "description": "Username that build Asterisk",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "kernel",
+        "machine",
+        "options",
+        "os",
+        "user"
+      ]
+    },
+    "CallerID": {
+      "description": "Caller identification",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "number"
+      ]
+    },
+    "Channel": {
+      "description": "A specific communication connection between Asterisk and an Endpoint.",
+      "properties": {
+        "accountcode": {
+          "type": "string"
+        },
+        "caller": {
+          "$ref": "#/definitions/CallerID"
+        },
+        "channelvars": {
+          "description": "Channel variables",
+          "type": "object"
+        },
+        "connected": {
+          "$ref": "#/definitions/CallerID"
+        },
+        "creationtime": {
+          "description": "Timestamp when channel was created",
+          "format": "date",
+          "type": "string"
+        },
+        "dialplan": {
+          "$ref": "#/definitions/DialplanCEP",
+          "description": "Current location in the dialplan"
+        },
+        "id": {
+          "description": "Unique identifier of the channel.\n\nThis is the same as the Uniqueid field in AMI.",
+          "type": "string"
+        },
+        "language": {
+          "description": "The default spoken language",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the channel (i.e. SIP/foo-0000a7e3)",
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountcode",
+        "caller",
+        "connected",
+        "creationtime",
+        "dialplan",
+        "id",
+        "language",
+        "name",
+        "state"
+      ]
+    },
+    "ChannelCallerId": {
+      "allOf": [
+        {
+          "description": "Channel changed Caller ID.",
+          "properties": {
+            "caller_presentation": {
+              "description": "The integer representation of the Caller Presentation value.",
+              "format": "int32",
+              "type": "integer"
+            },
+            "caller_presentation_txt": {
+              "description": "The text representation of the Caller Presentation value.",
+              "type": "string"
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that changed Caller ID."
+            }
+          },
+          "required": [
+            "caller_presentation",
+            "caller_presentation_txt",
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelConnectedLine": {
+      "allOf": [
+        {
+          "description": "Channel changed Connected Line.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel whose connected line has changed."
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelCreated": {
+      "allOf": [
+        {
+          "description": "Notification that a channel has been created.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelDestroyed": {
+      "allOf": [
+        {
+          "description": "Notification that a channel has been destroyed.",
+          "properties": {
+            "cause": {
+              "description": "Integer representation of the cause of the hangup",
+              "format": "int32",
+              "type": "integer"
+            },
+            "cause_txt": {
+              "description": "Text representation of the cause of the hangup",
+              "type": "string"
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "required": [
+            "cause",
+            "cause_txt",
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelDialplan": {
+      "allOf": [
+        {
+          "description": "Channel changed location in the dialplan.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that changed dialplan location."
+            },
+            "dialplan_app": {
+              "description": "The application about to be executed.",
+              "type": "string"
+            },
+            "dialplan_app_data": {
+              "description": "The data to be passed to the application.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "channel",
+            "dialplan_app",
+            "dialplan_app_data"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelDtmfReceived": {
+      "allOf": [
+        {
+          "description": "DTMF received on a channel.\n\nThis event is sent when the DTMF ends. There is no notification about the start of DTMF",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel on which DTMF was received"
+            },
+            "digit": {
+              "description": "DTMF digit received (0-9, A-E, # or *)",
+              "type": "string"
+            },
+            "duration_ms": {
+              "description": "Number of milliseconds DTMF was received",
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "channel",
+            "digit",
+            "duration_ms"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelEnteredBridge": {
+      "allOf": [
+        {
+          "description": "Notification that a channel has entered a bridge.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge"
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "required": [
+            "bridge"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelHangupRequest": {
+      "allOf": [
+        {
+          "description": "A hangup was requested on the channel.",
+          "properties": {
+            "cause": {
+              "description": "Integer representation of the cause of the hangup.",
+              "format": "int32",
+              "type": "integer"
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel on which the hangup was requested."
+            },
+            "soft": {
+              "description": "Whether the hangup request was a soft hangup request.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelHold": {
+      "allOf": [
+        {
+          "description": "A channel initiated a media hold.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that initiated the hold event."
+            },
+            "musicclass": {
+              "description": "The music on hold class that the initiator requested.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelLeftBridge": {
+      "allOf": [
+        {
+          "description": "Notification that a channel has left a bridge.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge"
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "required": [
+            "bridge",
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelMohStart": {
+      "allOf": [
+        {
+          "description": "MOH started on the channel.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel on which the MOH started."
+            },
+            "moh_class": {
+              "description": "The name of the MOH class that started",
+              "type": "string"
+            }
+          },
+          "required": [
+            "channel",
+            "moh_class"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelMohStop": {
+      "allOf": [
+        {
+          "description": "MOH stopped on the channel.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel on which the MOH stopped."
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelStateChange": {
+      "allOf": [
+        {
+          "description": "Notification of a channel's state change.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelTalkingFinished": {
+      "allOf": [
+        {
+          "description": "Talking is no longer detected on the channel.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel on which talking completed."
+            },
+            "duration": {
+              "description": "The length of time, in milliseconds, that talking was detected on the channel",
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "channel",
+            "duration"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelTalkingStarted": {
+      "allOf": [
+        {
+          "description": "Talking was detected on the channel.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel on which talking started."
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelUnhold": {
+      "allOf": [
+        {
+          "description": "A channel initiated a media unhold.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel that initiated the unhold event."
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelUserevent": {
+      "allOf": [
+        {
+          "description": "User-generated event with additional user-defined fields in the object.",
+          "properties": {
+            "bridge": {
+              "$ref": "#/definitions/Bridge",
+              "description": "A bridge that is signaled with the user event."
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "A channel that is signaled with the user event."
+            },
+            "endpoint": {
+              "$ref": "#/definitions/Endpoint",
+              "description": "A endpoint that is signaled with the user event."
+            },
+            "eventname": {
+              "description": "The name of the user event.",
+              "type": "string"
+            },
+            "userevent": {
+              "description": "Custom Userevent data",
+              "type": "object"
+            }
+          },
+          "required": [
+            "eventname",
+            "userevent"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ChannelVarset": {
+      "allOf": [
+        {
+          "description": "Channel variable changed.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel",
+              "description": "The channel on which the variable was set.\n\nIf missing, the variable is a global variable."
+            },
+            "value": {
+              "description": "The new value of the variable.",
+              "type": "string"
+            },
+            "variable": {
+              "description": "The variable that changed.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "value",
+            "variable"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "ConfigInfo": {
+      "description": "Info about Asterisk configuration",
+      "properties": {
+        "default_language": {
+          "description": "Default language for media playback.",
+          "type": "string"
+        },
+        "max_channels": {
+          "description": "Maximum number of simultaneous channels.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "max_load": {
+          "description": "Maximum load avg on system.",
+          "format": "double",
+          "type": "number"
+        },
+        "max_open_files": {
+          "description": "Maximum number of open file handles (files, sockets).",
+          "format": "int32",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Asterisk system name.",
+          "type": "string"
+        },
+        "setid": {
+          "$ref": "#/definitions/SetId",
+          "description": "Effective user/group id for running Asterisk."
+        }
+      },
+      "required": [
+        "default_language",
+        "name",
+        "setid"
+      ]
+    },
+    "ConfigTuple": {
+      "description": "A key/value pair that makes up part of a configuration object.",
+      "properties": {
+        "attribute": {
+          "description": "A configuration object attribute.",
+          "type": "string"
+        },
+        "value": {
+          "description": "The value for the attribute.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "attribute",
+        "value"
+      ]
+    },
+    "ContactInfo": {
+      "description": "Detailed information about a contact on an endpoint.",
+      "properties": {
+        "aor": {
+          "description": "The Address of Record this contact belongs to.",
+          "type": "string"
+        },
+        "contact_status": {
+          "description": "The current status of the contact.",
+          "type": "string"
+        },
+        "roundtrip_usec": {
+          "description": "Current round trip time, in microseconds, for the contact.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The location of the contact.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "aor",
+        "contact_status",
+        "uri"
+      ]
+    },
+    "ContactStatusChange": {
+      "allOf": [
+        {
+          "description": "The state of a contact on an endpoint has changed.",
+          "properties": {
+            "contact_info": {
+              "$ref": "#/definitions/ContactInfo"
+            },
+            "endpoint": {
+              "$ref": "#/definitions/Endpoint"
+            }
+          },
+          "required": [
+            "contact_info",
+            "endpoint"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "DeviceState": {
+      "description": "Represents the state of a device.",
+      "properties": {
+        "name": {
+          "description": "Name of the device.",
+          "type": "string"
+        },
+        "state": {
+          "description": "Device's state",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ]
+    },
+    "DeviceStateChanged": {
+      "allOf": [
+        {
+          "description": "Notification that a device state has changed.",
+          "properties": {
+            "device_state": {
+              "$ref": "#/definitions/DeviceState",
+              "description": "Device state object"
+            }
+          },
+          "required": [
+            "device_state"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "Dial": {
+      "allOf": [
+        {
+          "description": "Dialing state has changed.",
+          "properties": {
+            "caller": {
+              "$ref": "#/definitions/Channel",
+              "description": "The calling channel."
+            },
+            "dialstatus": {
+              "description": "Current status of the dialing attempt to the peer.",
+              "type": "string"
+            },
+            "dialstring": {
+              "description": "The dial string for calling the peer channel.",
+              "type": "string"
+            },
+            "forward": {
+              "description": "Forwarding target requested by the original dialed channel.",
+              "type": "string"
+            },
+            "forwarded": {
+              "$ref": "#/definitions/Channel",
+              "description": "Channel that the caller has been forwarded to."
+            },
+            "peer": {
+              "$ref": "#/definitions/Channel",
+              "description": "The dialed channel."
+            }
+          },
+          "required": [
+            "dialstatus",
+            "peer"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "Dialed": {
+      "description": "Dialed channel information."
+    },
+    "DialplanCEP": {
+      "description": "Dialplan location (context/extension/priority)",
+      "properties": {
+        "app_data": {
+          "description": "Parameter of current dialplan application",
+          "type": "string"
+        },
+        "app_name": {
+          "description": "Name of current dialplan application",
+          "type": "string"
+        },
+        "context": {
+          "description": "Context in the dialplan",
+          "type": "string"
+        },
+        "exten": {
+          "description": "Extension in the dialplan",
+          "type": "string"
+        },
+        "priority": {
+          "description": "Priority in the dialplan",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "app_data",
+        "app_name",
+        "context",
+        "exten",
+        "priority"
+      ]
+    },
+    "Endpoint": {
+      "description": "An external device that may offer/accept calls to/from Asterisk.\n\nUnlike most resources, which have a single unique identifier, an endpoint is uniquely identified by the technology/resource pair.",
+      "properties": {
+        "channel_ids": {
+          "description": "Id's of channels associated with this endpoint",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "resource": {
+          "description": "Identifier of the endpoint, specific to the given technology.",
+          "type": "string"
+        },
+        "state": {
+          "description": "Endpoint's state",
+          "type": "string"
+        },
+        "technology": {
+          "description": "Technology of the endpoint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel_ids",
+        "resource",
+        "technology"
+      ]
+    },
+    "EndpointStateChange": {
+      "allOf": [
+        {
+          "description": "Endpoint state changed.",
+          "properties": {
+            "endpoint": {
+              "$ref": "#/definitions/Endpoint"
+            }
+          },
+          "required": [
+            "endpoint"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "Event": {
+      "allOf": [
+        {
+          "description": "Base type for asynchronous events from Asterisk.",
+          "properties": {
+            "application": {
+              "description": "Name of the application receiving the event.",
+              "type": "string"
+            },
+            "timestamp": {
+              "description": "Time at which this event was created.",
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "application",
+            "timestamp"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Message"
+        }
+      ]
+    },
+    "ExternalMedia": {
+      "description": "ExternalMedia session.",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/Channel",
+          "description": "The Asterisk channel representing the external media"
+        },
+        "local_address": {
+          "description": "The local ip address used",
+          "type": "string"
+        },
+        "local_port": {
+          "description": "The local ip port used",
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "channel"
+      ]
+    },
+    "FormatLangPair": {
+      "description": "Identifies the format and language of a sound file",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "format",
+        "language"
+      ]
+    },
+    "LiveRecording": {
+      "description": "A recording that is in progress",
+      "properties": {
+        "cause": {
+          "description": "Cause for recording failure if failed",
+          "type": "string"
+        },
+        "duration": {
+          "description": "Duration in seconds of the recording",
+          "format": "int32",
+          "type": "integer"
+        },
+        "format": {
+          "description": "Recording format (wav, gsm, etc.)",
+          "type": "string"
+        },
+        "name": {
+          "description": "Base name for the recording",
+          "type": "string"
+        },
+        "silence_duration": {
+          "description": "Duration of silence, in seconds, detected in the recording. This is only available if the recording was initiated with a non-zero maxSilenceSeconds.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "state": {
+          "type": "string"
+        },
+        "talking_duration": {
+          "description": "Duration of talking, in seconds, detected in the recording. This is only available if the recording was initiated with a non-zero maxSilenceSeconds.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "target_uri": {
+          "description": "URI for the channel or bridge being recorded",
+          "type": "string"
+        }
+      },
+      "required": [
+        "format",
+        "name",
+        "state",
+        "target_uri"
+      ]
+    },
+    "LogChannel": {
+      "description": "Details of an Asterisk log channel",
+      "properties": {
+        "channel": {
+          "description": "The log channel path",
+          "type": "string"
+        },
+        "configuration": {
+          "description": "The various log levels",
+          "type": "string"
+        },
+        "status": {
+          "description": "Whether or not a log type is enabled",
+          "type": "string"
+        },
+        "type": {
+          "description": "Types of logs for the log channel",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "configuration",
+        "status",
+        "type"
+      ]
+    },
+    "Mailbox": {
+      "description": "Represents the state of a mailbox.",
+      "properties": {
+        "name": {
+          "description": "Name of the mailbox.",
+          "type": "string"
+        },
+        "new_messages": {
+          "description": "Count of new messages in the mailbox.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "old_messages": {
+          "description": "Count of old messages in the mailbox.",
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "new_messages",
+        "old_messages"
+      ]
+    },
+    "Message": {
+      "description": "Base type for errors and events",
+      "discriminator": "type",
+      "properties": {
+        "asterisk_id": {
+          "description": "The unique ID for the Asterisk instance that raised this event.",
+          "type": "string"
+        },
+        "type": {
+          "description": "Indicates the type of this message.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "MissingParams": {
+      "allOf": [
+        {
+          "description": "Error event sent when required params are missing.",
+          "properties": {
+            "params": {
+              "description": "A list of the missing parameters",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "params"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Message"
+        }
+      ]
+    },
+    "Module": {
+      "description": "Details of an Asterisk module",
+      "properties": {
+        "description": {
+          "description": "The description of this module",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of this module",
+          "type": "string"
+        },
+        "status": {
+          "description": "The running status of this module",
+          "type": "string"
+        },
+        "support_level": {
+          "description": "The support state of this module",
+          "type": "string"
+        },
+        "use_count": {
+          "description": "The number of times this module is being used",
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "description",
+        "name",
+        "status",
+        "support_level",
+        "use_count"
+      ]
+    },
+    "Peer": {
+      "description": "Detailed information about a remote peer that communicates with Asterisk.",
+      "properties": {
+        "address": {
+          "description": "The IP address of the peer.",
+          "type": "string"
+        },
+        "cause": {
+          "description": "An optional reason associated with the change in peer_status.",
+          "type": "string"
+        },
+        "peer_status": {
+          "description": "The current state of the peer. Note that the values of the status are dependent on the underlying peer technology.",
+          "type": "string"
+        },
+        "port": {
+          "description": "The port of the peer.",
+          "type": "string"
+        },
+        "time": {
+          "description": "The last known time the peer was contacted.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "peer_status"
+      ]
+    },
+    "PeerStatusChange": {
+      "allOf": [
+        {
+          "description": "The state of a peer associated with an endpoint has changed.",
+          "properties": {
+            "endpoint": {
+              "$ref": "#/definitions/Endpoint"
+            },
+            "peer": {
+              "$ref": "#/definitions/Peer"
+            }
+          },
+          "required": [
+            "endpoint",
+            "peer"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "Playback": {
+      "description": "Object representing the playback of media to a channel",
+      "properties": {
+        "id": {
+          "description": "ID for this playback operation",
+          "type": "string"
+        },
+        "language": {
+          "description": "For media types that support multiple languages, the language requested for playback.",
+          "type": "string"
+        },
+        "media_uri": {
+          "description": "The URI for the media currently being played back.",
+          "type": "string"
+        },
+        "next_media_uri": {
+          "description": "If a list of URIs is being played, the next media URI to be played back.",
+          "type": "string"
+        },
+        "state": {
+          "description": "Current state of the playback operation.",
+          "type": "string"
+        },
+        "target_uri": {
+          "description": "URI for the channel or bridge to play the media on",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "media_uri",
+        "state",
+        "target_uri"
+      ]
+    },
+    "PlaybackContinuing": {
+      "allOf": [
+        {
+          "description": "Event showing the continuation of a media playback operation from one media URI to the next in the list.",
+          "properties": {
+            "playback": {
+              "$ref": "#/definitions/Playback",
+              "description": "Playback control object"
+            }
+          },
+          "required": [
+            "playback"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "PlaybackFinished": {
+      "allOf": [
+        {
+          "description": "Event showing the completion of a media playback operation.",
+          "properties": {
+            "playback": {
+              "$ref": "#/definitions/Playback",
+              "description": "Playback control object"
+            }
+          },
+          "required": [
+            "playback"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "PlaybackStarted": {
+      "allOf": [
+        {
+          "description": "Event showing the start of a media playback operation.",
+          "properties": {
+            "playback": {
+              "$ref": "#/definitions/Playback",
+              "description": "Playback control object"
+            }
+          },
+          "required": [
+            "playback"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "RTPstat": {
+      "description": "A statistics of a RTP.",
+      "properties": {
+        "channel_uniqueid": {
+          "description": "The Asterisk channel's unique ID that owns this instance.",
+          "type": "string"
+        },
+        "local_maxjitter": {
+          "description": "Maximum jitter on local side.",
+          "format": "double",
+          "type": "number"
+        },
+        "local_maxrxploss": {
+          "description": "Maximum number of packets lost on local side.",
+          "format": "double",
+          "type": "number"
+        },
+        "local_minjitter": {
+          "description": "Minimum jitter on local side.",
+          "format": "double",
+          "type": "number"
+        },
+        "local_minrxploss": {
+          "description": "Minimum number of packets lost on local side.",
+          "format": "double",
+          "type": "number"
+        },
+        "local_normdevjitter": {
+          "description": "Average jitter on local side.",
+          "format": "double",
+          "type": "number"
+        },
+        "local_normdevrxploss": {
+          "description": "Average number of packets lost on local side.",
+          "format": "double",
+          "type": "number"
+        },
+        "local_ssrc": {
+          "description": "Our SSRC.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "local_stdevjitter": {
+          "description": "Standard deviation jitter on local side.",
+          "format": "double",
+          "type": "number"
+        },
+        "local_stdevrxploss": {
+          "description": "Standard deviation packets lost on local side.",
+          "format": "double",
+          "type": "number"
+        },
+        "maxrtt": {
+          "description": "Maximum round trip time.",
+          "format": "double",
+          "type": "number"
+        },
+        "minrtt": {
+          "description": "Minimum round trip time.",
+          "format": "double",
+          "type": "number"
+        },
+        "normdevrtt": {
+          "description": "Average round trip time.",
+          "format": "double",
+          "type": "number"
+        },
+        "remote_maxjitter": {
+          "description": "Maximum jitter on remote side.",
+          "format": "double",
+          "type": "number"
+        },
+        "remote_maxrxploss": {
+          "description": "Maximum number of packets lost on remote side.",
+          "format": "double",
+          "type": "number"
+        },
+        "remote_minjitter": {
+          "description": "Minimum jitter on remote side.",
+          "format": "double",
+          "type": "number"
+        },
+        "remote_minrxploss": {
+          "description": "Minimum number of packets lost on remote side.",
+          "format": "double",
+          "type": "number"
+        },
+        "remote_normdevjitter": {
+          "description": "Average jitter on remote side.",
+          "format": "double",
+          "type": "number"
+        },
+        "remote_normdevrxploss": {
+          "description": "Average number of packets lost on remote side.",
+          "format": "double",
+          "type": "number"
+        },
+        "remote_ssrc": {
+          "description": "Their SSRC.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "remote_stdevjitter": {
+          "description": "Standard deviation jitter on remote side.",
+          "format": "double",
+          "type": "number"
+        },
+        "remote_stdevrxploss": {
+          "description": "Standard deviation packets lost on remote side.",
+          "format": "double",
+          "type": "number"
+        },
+        "rtt": {
+          "description": "Total round trip time.",
+          "format": "double",
+          "type": "number"
+        },
+        "rxcount": {
+          "description": "Number of packets received.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "rxjitter": {
+          "description": "Jitter on received packets.",
+          "format": "double",
+          "type": "number"
+        },
+        "rxoctetcount": {
+          "description": "Number of octets received.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "rxploss": {
+          "description": "Number of received packets lost.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "stdevrtt": {
+          "description": "Standard deviation round trip time.",
+          "format": "double",
+          "type": "number"
+        },
+        "txcount": {
+          "description": "Number of packets transmitted.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "txjitter": {
+          "description": "Jitter on transmitted packets.",
+          "format": "double",
+          "type": "number"
+        },
+        "txoctetcount": {
+          "description": "Number of octets transmitted.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "txploss": {
+          "description": "Number of transmitted packets lost.",
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "channel_uniqueid",
+        "local_ssrc",
+        "remote_ssrc",
+        "rxcount",
+        "rxoctetcount",
+        "rxploss",
+        "txcount",
+        "txoctetcount",
+        "txploss"
+      ]
+    },
+    "RecordingFailed": {
+      "allOf": [
+        {
+          "description": "Event showing failure of a recording operation.",
+          "properties": {
+            "recording": {
+              "$ref": "#/definitions/LiveRecording",
+              "description": "Recording control object"
+            }
+          },
+          "required": [
+            "recording"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "RecordingFinished": {
+      "allOf": [
+        {
+          "description": "Event showing the completion of a recording operation.",
+          "properties": {
+            "recording": {
+              "$ref": "#/definitions/LiveRecording",
+              "description": "Recording control object"
+            }
+          },
+          "required": [
+            "recording"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "RecordingStarted": {
+      "allOf": [
+        {
+          "description": "Event showing the start of a recording operation.",
+          "properties": {
+            "recording": {
+              "$ref": "#/definitions/LiveRecording",
+              "description": "Recording control object"
+            }
+          },
+          "required": [
+            "recording"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "SetId": {
+      "description": "Effective user/group id",
+      "properties": {
+        "group": {
+          "description": "Effective group id.",
+          "type": "string"
+        },
+        "user": {
+          "description": "Effective user id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group",
+        "user"
+      ]
+    },
+    "Sound": {
+      "description": "A media file that may be played back.",
+      "properties": {
+        "formats": {
+          "description": "The formats and languages in which this sound is available.",
+          "items": {
+            "$ref": "#/definitions/FormatLangPair"
+          },
+          "type": "array"
+        },
+        "id": {
+          "description": "Sound's identifier.",
+          "type": "string"
+        },
+        "text": {
+          "description": "Text description of the sound, usually the words spoken.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "formats",
+        "id"
+      ]
+    },
+    "StasisEnd": {
+      "allOf": [
+        {
+          "description": "Notification that a channel has left a Stasis application.",
+          "properties": {
+            "channel": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "required": [
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "StasisStart": {
+      "allOf": [
+        {
+          "description": "Notification that a channel has entered a Stasis application.",
+          "properties": {
+            "args": {
+              "description": "Arguments to the application",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "channel": {
+              "$ref": "#/definitions/Channel"
+            },
+            "replace_channel": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "required": [
+            "args",
+            "channel"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "StatusInfo": {
+      "description": "Info about Asterisk status",
+      "properties": {
+        "last_reload_time": {
+          "description": "Time when Asterisk was last reloaded.",
+          "format": "date",
+          "type": "string"
+        },
+        "startup_time": {
+          "description": "Time when Asterisk was started.",
+          "format": "date",
+          "type": "string"
+        }
+      },
+      "required": [
+        "last_reload_time",
+        "startup_time"
+      ]
+    },
+    "StoredRecording": {
+      "description": "A past recording that may be played back.",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "format",
+        "name"
+      ]
+    },
+    "SystemInfo": {
+      "description": "Info about Asterisk",
+      "properties": {
+        "entity_id": {
+          "type": "string"
+        },
+        "version": {
+          "description": "Asterisk version.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "version"
+      ]
+    },
+    "TextMessage": {
+      "description": "A text message.",
+      "properties": {
+        "body": {
+          "description": "The text of the message.",
+          "type": "string"
+        },
+        "from": {
+          "description": "A technology specific URI specifying the source of the message. For sip and pjsip technologies, any SIP URI can be specified. For xmpp, the URI must correspond to the client connection being used to send the message.",
+          "type": "string"
+        },
+        "to": {
+          "description": "A technology specific URI specifying the destination of the message. Valid technologies include sip, pjsip, and xmp. The destination of a message should be an endpoint.",
+          "type": "string"
+        },
+        "variables": {
+          "description": "Technology specific key/value pairs associated with the message.",
+          "items": {
+            "$ref": "#/definitions/TextMessageVariable"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "body",
+        "from",
+        "to"
+      ]
+    },
+    "TextMessageReceived": {
+      "allOf": [
+        {
+          "description": "A text message was received from an endpoint.",
+          "properties": {
+            "endpoint": {
+              "$ref": "#/definitions/Endpoint"
+            },
+            "message": {
+              "$ref": "#/definitions/TextMessage"
+            }
+          },
+          "required": [
+            "message"
+          ]
+        },
+        {
+          "$ref": "#/definitions/Event"
+        }
+      ]
+    },
+    "TextMessageVariable": {
+      "description": "A key/value pair variable in a text message.",
+      "properties": {
+        "key": {
+          "description": "A unique key identifying the variable.",
+          "type": "string"
+        },
+        "value": {
+          "description": "The value of the variable.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "Variable": {
+      "description": "The value of a channel variable",
+      "properties": {
+        "value": {
+          "description": "The value of the variable requested",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ]
+    }
+  },
+  "tags": [
+    {
+      "description": "Stasis application resources",
+      "name": "applications"
+    },
+    {
+      "description": "Asterisk resources",
+      "name": "asterisk"
+    },
+    {
+      "description": "Bridge resources",
+      "name": "bridges"
+    },
+    {
+      "description": "Channel resources",
+      "name": "channels"
+    },
+    {
+      "description": "Device state resources",
+      "name": "deviceStates"
+    },
+    {
+      "description": "Endpoint resources",
+      "name": "endpoints"
+    },
+    {
+      "description": "WebSocket resource",
+      "name": "events"
+    },
+    {
+      "description": "Mailboxes resources",
+      "name": "mailboxes"
+    },
+    {
+      "description": "Playback control resources",
+      "name": "playbacks"
+    },
+    {
+      "description": "Recording resources",
+      "name": "recordings"
+    },
+    {
+      "description": "Sound resources",
+      "name": "sounds"
+    }
+  ]
+}
