@@ -11,7 +11,6 @@ import uvicorn
 from fastapi import FastAPI
 import swagger_client
 from swagger_client import Configuration
-from swagger_client.rest import ApiException
 
 RECONNECT_RATE = 1
 
@@ -77,11 +76,6 @@ class Channel:
         return self.obj.get('dialplan', {})
 
     @property
-    def app_name(self):
-        dialplan = self.dialplan
-        return dialplan.get('app_data')
-
-    @property
     def id(self):
         return self.obj.get('id')
 
@@ -99,15 +93,16 @@ class Consumer:
         self.queue.put_nowait(msg)
 
     def on_error(self, exc):
-        logging.error("Connection lost while consuming queue : %s" % exc)
+        logger.error("Connection lost while consuming queue : %s" % exc)
 
 
 class Application:
 
-    def __init__(self, context, id, name):
+    def __init__(self, context, id, name, register=False):
         self.context = context
         self.id = id
         self.name = name
+        self.register = register
 
         self.fastapi = FastAPI()
 
@@ -126,14 +121,21 @@ class Application:
         process_msgs_task = loop.create_task(
             self.process_msgs(queue))
 
+        if self.register:
+            register_task = loop.create_task(self.register_all_ari(loop))
+
         api_task = loop.create_task(self.run_api())
 
         try:
             loop.run_until_complete(api_task)
         finally:
+            if self.register:
+                register_task.cancel()
             reconnect_task.cancel()
             process_msgs_task.cancel()
 
+            if self.register:
+                loop.run_until_complete(register_task)
             loop.run_until_complete(reconnect_task)
             loop.run_until_complete(process_msgs_task)
 
@@ -165,14 +167,14 @@ class Application:
             exchange = await channel.declare_exchange(
                 self.context.amqp_exchange, 'topic')
 
-            amqp_queue = await channel.declare_queue()
+            amqp_queue = await channel.declare_queue('apps')
             await amqp_queue.bind(exchange, '#')
 
             consumer = Consumer(queue)
             await amqp_queue.consume(consumer)
 
         except asynqp.AMQPError as err:
-            logging.error("Could not consume on queue %s" % err)
+            logger.error("Could not consume on queue %s" % err)
             await connection.close()
             return None
         return connection
@@ -182,17 +184,17 @@ class Application:
             connection = None
             while True:
                 if connection is None or connection.is_closed():
-                    logging.info("Connecting to rabbitmq...")
+                    logger.info("Connecting to rabbitmq...")
                     try:
                         connection = await self.connect_and_consume(queue)
                     except (ConnectionError, OSError):
-                        logging.error("Failed to connect to rabbitmq server. "
+                        logger.error("Failed to connect to rabbitmq server. "
                                       "Will retry in {} seconds".format(RECONNECT_RATE))
                         connection = None
                     if connection is None:
                         await asyncio.sleep(RECONNECT_RATE)
                     else:
-                        logging.info("Successfully connected and consuming")
+                        logger.info("Successfully connected and consuming")
                         await self.register_consul(loop)
 
                 await asyncio.sleep(0.1)
@@ -212,20 +214,26 @@ class Application:
             while True:
                 msg = await queue.get()
 
-                obj = json.loads(msg.body)
+                try:
+                    obj = json.loads(msg.body)
+                except Exception as e:
+                    logger.error("Error while decoding AMQP message: %s" % e)
+                    continue
 
                 asterisk_id = obj.get('asterisk_id', '')
 
                 typ = obj.get('type', '')
-                channel = Channel(obj.get('channel', {}))
+                app = obj.get('application', '')
+                if app != self.name:
+                    continue
 
+
+                channel = Channel(obj.get('channel', {}))
                 key = "%s/%s" % (typ, channel.state)
 
                 callback = type_state_cb.get(key)
                 if callback:
-                    # NOTE will be handled by a higher level component
-                    if channel.app_name == self.name:
-                        await callback(asterisk_id, channel)
+                    await callback(asterisk_id, channel)
 
                 msg.ack()
         except asyncio.CancelledError:
@@ -235,8 +243,9 @@ class Application:
         c = consul.aio.Consul(
             host=self.context.consul_host,
             port=self.context.consul_port, loop=loop)
+
         while True:
-            logging.info(
+            logger.info(
                 "Registering application %s in Consul" % self.name)
             try:
                 response = await c.kv.put("applications/%s" % self.name, "UP")
@@ -261,7 +270,7 @@ class Application:
                     raise Exception("error",
                                     "registering check %s" % self.name)
 
-                logging.info(
+                logger.info(
                     "Service check %s registered in Consul" % self.name)
                 # TODO waiting for a new version of python consul to
                 # get the coroutine then return await c.close()
@@ -269,43 +278,68 @@ class Application:
 
                 return
             except Exception as e:
-                logging.error("Consul error: %s", e)
+                logger.error("Consul error: %s", e)
 
             await asyncio.sleep(5)
+
+    async def register_all_ari(self, loop):
+        try:
+            c = consul.aio.Consul(
+                host=self.context.consul_host,
+                port=self.context.consul_port, loop=loop)
+
+            while True:
+                eids = []
+
+                (_, nodes) = await c.health.service("asterisk")
+                for node in nodes:
+                    service = node.get("Service", {})
+                    meta = service.get("Meta", {})
+                    eid = meta.get("eid")
+
+                    if eid:
+                        eids.append(eid)
+
+                for eid in eids:
+                    await self.register_ari(eid)
+
+                await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            pass
 
     async def register_ari(self, asterisk_id):
         while True:
             # NOTE this will change in order to make a call toward consul
             if asterisk_id:
-                logging.info(
+                logger.info(
                     "Registering application %s on %s" %
                     (self.name, asterisk_id))
             else:
-                logging.info("Registering application %s" % self.name)
+                logger.info("Registering application %s" % self.name)
 
             try:
                 amqp_api = swagger_client.AmqpApi(self.api_client)
                 await amqp_api.amqp_app_name_post(
                     self.name, x_asterisk_id=asterisk_id)
 
-                logging.info("Registered application %s" % self.name)
-            except ApiException as e:
-                logging.error("Error while registering application %s : %s" % (
+                logger.info("Registered application %s" % self.name)
+            except Exception as e:
+                logger.error("Error while registering application %s : %s" % (
                     self.name, e))
 
             await asyncio.sleep(5)
 
     async def answer(self, asterisk_id, channel):
-        logging.info("Answering call on channel : %s" % channel.id)
+        logger.info("Answering call on channel : %s" % channel.id)
 
         try:
             channels_api = swagger_client.ChannelsApi(self.api_client)
             await channels_api.channels_channel_id_answer_post(
                 channel.id, x_asterisk_id=asterisk_id)
 
-            logging.info("Answered channel %s successful" % channel.id)
-        except ApiException as e:
-            logging.error("Error while answering channel %s : %s" % (
+            logger.info("Answered channel %s successful" % channel.id)
+        except Exception as e:
+            logger.error("Error while answering channel %s : %s" % (
                 channel.id, e))
 
     def run(self):

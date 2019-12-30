@@ -22,8 +22,9 @@ APP_NAME = "astts"
 
 class AsttsApplication(Application):
 
-    def __init__(self, context, id, name, data_dir='/tmp/astts'):
-        super().__init__(context, id, name)
+    def __init__(self, context, id, name, register=False,
+                 data_dir='/tmp/astts'):
+        super().__init__(context, id, name, register=register)
 
         self.data_dir = data_dir
 
@@ -62,13 +63,14 @@ class AsttsApplication(Application):
         return Response(content=data, media_type="audio/wav")
 
     async def onStart(self, asterisk_id, channel):
-        logging.info(
+        print("zz")
+        logger.info(
             "Starting application on channel %s:%s" %
             (asterisk_id, channel.id))
         await self.answer(asterisk_id, channel)
 
     async def onEnd(self, asterisk_id, channel):
-        logging.info(
+        logger.info(
             "End of application on channel %s:%s" % (asterisk_id, channel.id))
 
         task = self.tts_tasks[channel.id]
@@ -83,7 +85,7 @@ class AsttsApplication(Application):
 
     async def say_asterisk_id(self, asterisk_id, channel):
         while True:
-            logging.info(
+            logger.info(
                 "Going to say something on channel %s:%s" %
                 (asterisk_id, channel.id))
 
@@ -100,10 +102,10 @@ class AsttsApplication(Application):
                 await channels_api.channels_channel_id_play_post(
                     channel.id, [uri], x_asterisk_id=asterisk_id)
 
-                logging.info("Said something on channel %s:%s" %
+                logger.info("Said something on channel %s:%s" %
                              (asterisk_id, channel.id))
             except ApiException as e:
-                logging.error("Error while saiying something %s : %s" % (
+                logger.error("Error while saiying something %s : %s" % (
                     channel.id, e))
                 return
 
@@ -126,6 +128,9 @@ def main():
                         help="application config file")
     parser.add_argument("--data-dir", default="/tmp/astts",
                         help="application data directory")
+    parser.add_argument("--register", dest="register", default=False,
+                        action='store_true',
+                        help="application data directory")
     args = parser.parse_args()
 
     context = Context()
@@ -138,7 +143,8 @@ def main():
     if args.port:
         context.port = args.port
 
-    app = AsttsApplication(context, args.id, APP_NAME, args.data_dir)
+    app = AsttsApplication(context, args.id, APP_NAME,
+                           data_dir=args.data_dir, register=args.register)
     app.launch()
 
 

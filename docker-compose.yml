@@ -8,7 +8,6 @@ services:
     links:
       - consul
       - rabbitmq
-      - apps
     expose:
       - 8888/tcp
     volumes:
@@ -52,6 +51,7 @@ services:
       - consul
       - api-gateway
       - rabbitmq
+      - asterisk
     expose:
       - 8000/tcp
     ports:
