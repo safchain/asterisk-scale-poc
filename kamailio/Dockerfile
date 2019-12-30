@@ -9,5 +9,6 @@ COPY --from=template /bin/consul-template /usr/bin/consul-template
 ADD ./config/kamailio/* /etc/kamailio/
 ADD ./config/consul-template/* /config/
 
-CMD consul-template -log-level debug -config /config/template.hcl
-ENTRYPOINT consul-template -log-level debug -config /config/template.hcl
+ADD ./entry.sh /
+
+ENTRYPOINT /entry.sh
