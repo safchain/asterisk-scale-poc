@@ -1,0 +1,53 @@
+wazo-res-stasis-amqp (0.0.3) wazo-dev-stretch; urgency=medium
+
+  * update for asterisk 16
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Mon, 22 Oct 2018 09:36:59 -0400
+
+wazo-res-stasis-amqp (0.0.2-6) wazo-dev; urgency=medium
+
+  * update deprecated Source-Version variable
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 09 Jan 2018 12:03:17 -0500
+
+wazo-res-stasis-amqp (0.0.2-5) wazo-dev; urgency=medium
+
+  * add missing libssl-dev build-depends
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 09 Jan 2018 11:44:10 -0500
+
+wazo-res-stasis-amqp (0.0.2-4) wazo-dev; urgency=medium
+
+  * update for debian stretch
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 09 Jan 2018 10:58:33 -0500
+
+wazo-res-stasis-amqp (0.0.2-3) wazo-dev; urgency=medium
+
+  * add dbg package
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Wed, 18 Oct 2017 14:43:28 -0400
+
+wazo-res-stasis-amqp (0.0.2-2) wazo-dev; urgency=medium
+
+  * update for asterisk 15.0.0
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Wed, 11 Oct 2017 13:55:07 -0400
+
+wazo-res-stasis-amqp (0.0.2-1) wazo-dev; urgency=medium
+
+  * modify asterisk-dev dependency
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 12 Sep 2017 07:38:15 -0400
+
+wazo-res-stasis-amqp (0.0.2) wazo-dev; urgency=medium
+
+  * Rebuild for asterisk 14
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Mon, 11 Sep 2017 15:05:49 -0400
+
+wazo-res-stasis-amqp (0.0.1) wazo-dev; urgency=medium
+
+  * Initial release.
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Fri, 08 Sep 2017 14:37:27 -0400

@@ -1,0 +1,16 @@
+[general]
+;enabled = yes  ; Set to no to disable
+
+;[bunny]
+;type = connection
+;url = amqp://localhost         ; amqp://[$USERNAME@]$HOST[:$PORT][/$VHOST]
+                                ;  username defaults to guest
+                                ;  port defaults to 5672
+                                ;  vhost defaults to /
+;password =                     ; Password to use for login
+                                ;  defaults to guest
+;max_frame_bytes =              ; Maximum frame size, in bytes; defaults to
+                                ; AMQP_DEFAULT_FRAME_SIZE (131072, or 128KB)
+;heartbeat_seconds =            ; number of seconds between heartbeat frames
+                                ; 0 disables hearbeats; defaults to
+                                ; AMQP_DEFAULT_HEARTBEAT (0)

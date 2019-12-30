@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE docs SYSTEM "appdocsxml.dtd">
+<docs xmlns:xi="http://www.w3.org/2001/XInclude">
+   <configInfo name="res_amqp" language="en_US">
+       <synopsis>AMQP client API</synopsis>
+       <configFile name="amqp.conf">
+           <configObject name="general">
+               <synopsis>General configuration settings</synopsis>
+               <configOption name="enabled">
+                   <synopsis>Enable/disable the AMQP module</synopsis>
+                   <description>
+                       <para>This option enables or disables the AMQP module.</para>
+                   </description>
+               </configOption>
+           </configObject>
+
+           <configObject name="connection">
+               <synopsis>Per-connection configuration settings</synopsis>
+               <configOption name="type">
+                   <synopsis>Define this configuration section as a connection.</synopsis>
+                   <description>
+                       <enumlist>
+                           <enum name="connection"><para>Configure this section as a <replaceable>connection</replaceable></para></enum>
+                       </enumlist>
+                   </description>
+               </configOption>
+               <configOption name="url">
+                   <synopsis>URL to connect to</synopsis>
+                   <description>
+                       <para>URL of the AMQP server to connect to. Is of the form <literal>amqp://[$USERNAME[:$PASSWORD]@]$HOST[:$PORT]/[$VHOST]</literal></para>
+                   </description>
+               </configOption>
+               <configOption name="password">
+                   <synopsis>Password for AMQP login</synopsis>
+                   <description>
+                       <para>When the AMQP server requires login, specified the login password</para>
+                   </description>
+               </configOption>
+               <configOption name="max_frame_bytes">
+                   <synopsis>The maximum size of an AMQP frame on the wire to request of the broker for this connection.</synopsis>
+                   <description>
+                       <para>4096 is the minimum size, 2^31-1 is the maximum</para>
+                   </description>
+               </configOption>
+               <configOption name="heartbeat_seconds">
+                   <synopsis>the number of seconds between heartbeat frames to request of the broker</synopsis>
+                   <description>
+                       <para>A value of 0 disables heartbeats.</para>
+                   </description>
+               </configOption>
+           </configObject>
+       </configFile>
+   </configInfo>
+</docs>

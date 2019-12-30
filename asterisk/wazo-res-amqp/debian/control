@@ -1,0 +1,21 @@
+Source: wazo-res-amqp
+Section: comm
+Priority: extra
+Maintainer: Wazo Maintainers <dev@wazo.community>
+Build-Depends: debhelper (>= 9), asterisk-dev (>= 8:16), librabbitmq-dev
+Standards-Version: 3.9.6
+
+Package: wazo-res-amqp
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, asterisk (>= 8:16.5.0-1~wazo6)
+Description: AMQP module for the Asterisk IPBX
+ Connects to an AMQP server to publish messages.
+ .
+
+Package: wazo-res-amqp-dev
+Architecture: all
+Section: devel
+Depends: ${misc:Depends}, asterisk-dev (>= 8:14), librabbitmq-dev
+Description: AMQP module for the Asterisk IPBX
+ Connects to an AMQP server to publish messages.
+ .

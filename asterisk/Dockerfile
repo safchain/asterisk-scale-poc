@@ -8,7 +8,7 @@ RUN wget http://mirror.wazo.community/wazo_current.key
 RUN apt-key add wazo_current.key
 RUN apt-get update
 RUN apt-get -y install asterisk asterisk-dev librabbitmq-dev make gcc libcurl4-openssl-dev \
-    git jq wazo-res-stasis-amqp wazo-res-amqp asterisk-sounds-main strace net-tools lsof \
+    git jq asterisk-sounds-main strace net-tools lsof \
     procps vim libjansson-dev
 
 # clean up previous conf
@@ -31,18 +31,23 @@ RUN make install
 RUN make samples
 
 # Install Asterisk consul app module
-ADD asterisk-res-consul-stasis-app /usr/src/asterisk-res-consul-stasis-app
-WORKDIR /usr/src/asterisk-res-consul-stasis-app
+#ADD asterisk-res-consul-stasis-app /usr/src/asterisk-res-consul-stasis-app
+#WORKDIR /usr/src/asterisk-res-consul-stasis-app
+#RUN make clean
+#RUN CFLAGS=-g make
+#RUN make install
+
+ADD wazo-res-amqp /usr/src/wazo-res-amqp
+WORKDIR /usr/src/wazo-res-amqp
 RUN make clean
 RUN CFLAGS=-g make
 RUN make install
 
-# Patch AMQP stasis module
-WORKDIR /usr/src
-RUN git clone https://github.com/wazo-platform/wazo-res-stasis-amqp
+ADD wazo-res-stasis-amqp /usr/src/wazo-res-stasis-amqp
 WORKDIR /usr/src/wazo-res-stasis-amqp
-RUN cp amqp.json /usr/share/asterisk/rest-api
-RUN bin/patch_ari_resources.sh
+RUN make clean
+RUN CFLAGS="-I../wazo-res-amqp -g" make
+RUN make install
 
 ADD etc/asterisk/* /etc/asterisk/
 

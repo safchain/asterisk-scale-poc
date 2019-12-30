@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE docs SYSTEM "appdocsxml.dtd">
+<docs xmlns:xi="http://www.w3.org/2001/XInclude">
+	<configInfo name="res_stasis_amqp" language="en_US">
+		<synopsis>Stasis to AMQP Backend</synopsis>
+		<configFile name="stasis_amqp.conf">
+			<configObject name="global">
+				<synopsis>Global configuration settings</synopsis>
+				<configOption name="connection">
+					<synopsis>Name of the connection from amqp.conf to use</synopsis>
+					<description>
+						<para>Specifies the name of the connection from amqp.conf to use</para>
+					</description>
+				</configOption>
+				<configOption name="queue">
+					<synopsis>Name of the queue to post to</synopsis>
+					<description>
+						<para>Defaults to asterisk_stasis</para>
+					</description>
+				</configOption>
+				<configOption name="exchange">
+					<synopsis>Name of the exchange to post to</synopsis>
+					<description>
+						<para>Defaults to empty string</para>
+					</description>
+				</configOption>
+			</configObject>
+		</configFile>
+	</configInfo>
+</docs>

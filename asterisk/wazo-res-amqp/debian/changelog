@@ -1,0 +1,47 @@
+wazo-res-amqp (0.0.7) wazo-dev-buster; urgency=medium
+
+  * rebuild for buster
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Wed, 02 Oct 2019 08:55:00 -0400
+
+wazo-res-amqp (0.0.6) wazo-dev-stretch; urgency=medium
+
+  * update for asterisk 16
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Mon, 22 Oct 2018 09:36:01 -0400
+
+wazo-res-amqp (0.0.5) wazo-dev; urgency=medium
+
+  *  update for debian stretch
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 09 Jan 2018 10:57:13 -0500
+
+wazo-res-amqp (0.0.4) wazo-dev; urgency=medium
+
+  * update for asterisk 15.0.0
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Wed, 11 Oct 2017 12:49:24 -0400
+
+wazo-res-amqp (0.0.3) wazo-dev; urgency=medium
+
+  * add the .so manually in the install file
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 12 Sep 2017 08:33:07 -0400
+
+wazo-res-amqp (0.0.2-1) wazo-dev; urgency=medium
+
+  * force the build against asterisk 14
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 12 Sep 2017 07:39:54 -0400
+
+wazo-res-amqp (0.0.2) wazo-dev; urgency=medium
+
+  * rebuild for asterisk 14
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Mon, 11 Sep 2017 15:12:14 -0400
+
+wazo-res-amqp (0.0.1) wazo-dev; urgency=medium
+
+  * Initial release.
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Fri, 08 Sep 2017 13:06:33 -0400

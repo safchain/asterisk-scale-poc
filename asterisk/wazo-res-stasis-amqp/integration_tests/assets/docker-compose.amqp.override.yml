@@ -1,0 +1,8 @@
+version: "3.7"
+services:
+  sync:
+    depends_on:
+      - ari_amqp
+      - rabbitmq
+    environment:
+      TARGETS: "ari_amqp:5039 rabbitmq:5672"

@@ -1,0 +1,4 @@
+debian/tmp/usr/lib usr/
+debian/tmp/usr/share usr/
+bin/* usr/share/wazo-res-stasis-amqp/
+service/wazo-res-stasis-amqp.conf lib/systemd/system/asterisk.service.d
