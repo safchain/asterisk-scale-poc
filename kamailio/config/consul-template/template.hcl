@@ -5,5 +5,5 @@ consul {
 template {
   source = "/config/kamailio.ctmpl"
   destination  = "/etc/kamailio/dispatcher.list"
-  command = "kamctl dispatcher reload"
+  command = "/bin/bash -c 'kamctl dispatcher reload || true'"
 }
