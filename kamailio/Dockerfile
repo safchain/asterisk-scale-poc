@@ -2,7 +2,7 @@ FROM hashicorp/consul-template:alpine as template
 
 FROM kamailio/kamailio:5.3.1-buster
 
-RUN apt-get -yqq update && apt-get -yqq install procps
+RUN apt-get -yqq update && apt-get -yqq install procps jq
 
 COPY --from=template /bin/consul-template /usr/bin/consul-template
 
