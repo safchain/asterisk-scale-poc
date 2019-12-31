@@ -56,6 +56,9 @@
  * 
  */
 
+#include "stdlib.h"
+#include "stdio.h"
+
 #include "asterisk.h"
 
 #include "asterisk/module.h"
@@ -76,22 +79,28 @@ struct ao2_container *registered_apps = NULL;
 // and amqp ?
 int ast_subscribe_to_stasis(const char *app_name);
 
-static int register_application(const char* app) {
+static int register_application(const char* app_name) {
 	const char *tags[2] = { asterisk_eid, NULL };
-	int res = ast_subscribe_to_stasis(app);
+
+	int res = ast_subscribe_to_stasis(app_name);
 	if (!res) {
-		ast_log(LOG_NOTICE, "application %s registered\n", app);
+		char* service_id = (char*) ast_calloc(1, strlen(app_name) + 7);
+		sprintf(service_id, "stasis/%s", app_name);
+
+		ast_log(LOG_NOTICE, "application %s registered\n", app_name);
 		ast_consul_service_register(
-			app,
-			app,
+			service_id,
+			app_name,
 			"",
 			0,
 			tags,
 			NULL,
 			NULL
 		);
+
+		ast_free(service_id);
 	} else {
-		ast_log(LOG_NOTICE, "failed to register application %s\n", app);
+		ast_log(LOG_NOTICE, "failed to register application %s\n", app_name);
 	}
 	return res;
 }
@@ -112,23 +121,23 @@ static int unregister_application_cb(void *obj, void *arg, int flags) {
 static int consul_watch_callback(int app_count, const char **applications) {
 	RAII_VAR(struct ao2_container *, existing_apps, NULL, ao2_cleanup);
 
-	ao2_lock(registered_apps);
-	existing_apps = ao2_container_clone(registered_apps, OBJ_NOLOCK);
 	for (int i = 0; i < app_count; i++) {
 		const char *app_name = applications[i];
-		void *result = ao2_find(existing_apps, app_name, OBJ_UNLINK | OBJ_SEARCH_KEY);
-		ast_log(LOG_NOTICE, "searched for %s in existing app => %p\n", app_name, result);
-		if (!result) {
-			// NOTE(safchain) quick fix need something cleaner to remove prefix
-			if (strncmp(app_name, "applications/", 13) == 0) {
-				if (!register_application(app_name + 13)) {
+		// NOTE(safchain) not sure if we need to bypass or we need to update
+		if (strncmp(app_name, "applications/", 13) == 0) {
+			const char *name = app_name + 13;
+
+			void *app = stasis_app_get_by_name(name);
+			if (app != NULL) {
+				ast_log(LOG_NOTICE, "application already %s registered\n", name);
+			} else {
+				// NOTE(safchain) quick fix need something cleaner to remove prefix
+				if (!register_application(name)) {
 					ast_str_container_add(registered_apps, app_name);
 				}
 			}
 		}
 	}
-	ao2_callback(existing_apps, 0, unregister_application_cb, NULL);
-	ao2_unlock(registered_apps);
 
 	return 0;
 }

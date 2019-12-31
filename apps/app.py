@@ -121,21 +121,29 @@ class Application:
         process_msgs_task = loop.create_task(
             self.process_msgs(queue))
 
+        # mainly for dev or debug purpose when not using consul
         if self.register:
-            register_task = loop.create_task(self.register_all_ari(loop))
+            ari_register_task = loop.create_task(self.register_all_ari(loop))
 
         api_task = loop.create_task(self.run_api())
+        register_task = loop.create_task(self.register_consul(loop))
 
         try:
             loop.run_until_complete(api_task)
         finally:
+            register_task.cancel()
+
             if self.register:
-                register_task.cancel()
+                ari_register_task.cancel()
+
             reconnect_task.cancel()
             process_msgs_task.cancel()
 
+            loop.run_until_complete(register_task)
+
             if self.register:
-                loop.run_until_complete(register_task)
+                loop.run_until_complete(ari_register_task)
+
             loop.run_until_complete(reconnect_task)
             loop.run_until_complete(process_msgs_task)
 
@@ -189,13 +197,12 @@ class Application:
                         connection = await self.connect_and_consume(queue)
                     except (ConnectionError, OSError):
                         logger.error("Failed to connect to rabbitmq server. "
-                                      "Will retry in {} seconds".format(RECONNECT_RATE))
+                                     "Will retry in {} seconds".format(RECONNECT_RATE))
                         connection = None
                     if connection is None:
                         await asyncio.sleep(RECONNECT_RATE)
                     else:
                         logger.info("Successfully connected and consuming")
-                        await self.register_consul(loop)
 
                 await asyncio.sleep(0.1)
         except asyncio.CancelledError:
@@ -227,7 +234,6 @@ class Application:
                 if app != self.name:
                     continue
 
-
                 channel = Channel(obj.get('channel', {}))
                 key = "%s/%s" % (typ, channel.state)
 
@@ -240,47 +246,53 @@ class Application:
             pass
 
     async def register_consul(self, loop):
-        c = consul.aio.Consul(
-            host=self.context.consul_host,
-            port=self.context.consul_port, loop=loop)
+        try:
+            c = consul.aio.Consul(
+                host=self.context.consul_host,
+                port=self.context.consul_port, loop=loop)
 
-        while True:
-            logger.info(
-                "Registering application %s in Consul" % self.name)
-            try:
-                response = await c.kv.put("applications/%s" % self.name, "UP")
-                if response is not True:
-                    raise Exception("error",
-                                    "registering application %s" % self.name)
-
-                response = await c.agent.service.register(
-                    self.name, service_id=self.id,
-                    address=self.context.host, port=self.context.port,
-                )
-                if response is not True:
-                    raise Exception("error",
-                                    "registering service %s" % self.name)
-
-                status_url = "http://%s:%d/status" % (
-                    self.context.host, self.context.port)
-                response = await c.agent.check.register(
-                    self.name, consul.Check.http(status_url, '5s'),
-                    service_id=self.id)
-                if response is not True:
-                    raise Exception("error",
-                                    "registering check %s" % self.name)
-
+            revision = 1
+            while True:
                 logger.info(
-                    "Service check %s registered in Consul" % self.name)
-                # TODO waiting for a new version of python consul to
-                # get the coroutine then return await c.close()
-                c.close()
+                    "Registering application %s in Consul" % self.name)
+                try:
+                    service_id = "apps/%s" % self.id
+                    service_name = self.name
 
-                return
-            except Exception as e:
-                logger.error("Consul error: %s", e)
+                    response = await c.kv.put("applications/%s" % self.name,
+                                              "%d" % revision)
+                    if response is not True:
+                        raise Exception(
+                            "error",
+                            "registering application %s" % self.name)
 
-            await asyncio.sleep(5)
+                    response = await c.agent.service.register(
+                        service_name, service_id=service_id,
+                        address=self.context.host, port=self.context.port,
+                    )
+                    if response is not True:
+                        raise Exception("error",
+                                        "registering service %s" % self.name)
+
+                    status_url = "http://%s:%d/status" % (
+                        self.context.host, self.context.port)
+                    response = await c.agent.check.register(
+                        self.name, consul.Check.http(status_url, '5s'),
+                        service_id=service_id)
+                    if response is not True:
+                        raise Exception("error",
+                                        "registering check %s" % self.name)
+
+                    logger.info(
+                        "Service check %s registered in Consul" % self.name)
+
+                    revision += 1
+                except Exception as e:
+                    logger.error("Consul error: %s", e)
+
+                await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            pass
 
     async def register_all_ari(self, loop):
         try:

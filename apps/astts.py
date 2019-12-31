@@ -63,7 +63,6 @@ class AsttsApplication(Application):
         return Response(content=data, media_type="audio/wav")
 
     async def onStart(self, asterisk_id, channel):
-        print("zz")
         logger.info(
             "Starting application on channel %s:%s" %
             (asterisk_id, channel.id))

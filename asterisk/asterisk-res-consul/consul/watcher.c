@@ -151,6 +151,7 @@ int consul_multi_watch(consul_client_t *client, consul_watcher_t **watchers) {
     fd_set           r, w, e;
     consul_watcher_t *watcher;
     CURLM            *mcurl;
+    CURLMcode        mc;
 
     struct timeval tv;
 
@@ -164,25 +165,13 @@ int consul_multi_watch(consul_client_t *client, consul_watcher_t **watchers) {
     backoff_max = 1000;
 
     for(;;) {
-        curl_multi_perform(mcurl, &left);
-        if (left) {
-            FD_ZERO(&r);
-            FD_ZERO(&w);
-            FD_ZERO(&e);
+        mc = curl_multi_perform(mcurl, &left);
+        if(mc == CURLM_OK ) {
+            mc = curl_multi_wait(mcurl, NULL, 0, 1000, &maxfd);
+        }
 
-            curl_multi_timeout(mcurl, &timeout);
-            if (timeout == -1) {
-                timeout = 100;
-            }
-            tv.tv_sec = timeout/1000;
-            tv.tv_usec = (timeout%1000)*1000;
-
-            curl_multi_fdset(mcurl, &r, &w, &e, &maxfd);
-
-            /* TODO(sbaubeau) handle errors */
-            select(maxfd+1, &r, &w, &e, &tv);
-
-            curl_multi_perform(mcurl, &left);
+        if(mc != CURLM_OK) {
+            break;
         }
 
         added = consul_check_watchers(client, mcurl);

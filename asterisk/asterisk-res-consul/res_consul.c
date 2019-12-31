@@ -216,7 +216,14 @@ int ast_consul_service_register(const char* id,
         }
     }
 
-    success = consul_response_is_success(consul_service_register(active_client, &service));
+    consul_response_t *response = consul_service_register(active_client, &service);
+    success = consul_response_is_success(response);
+
+    if (!success) {
+        ast_log(LOG_ERROR, "failed to register service %s\n", response->err->message);
+    }
+
+    consul_response_cleanup(response);
 
     for (i = 0; i < checks_count; i++) {
         ast_free(service.checks[i]);
@@ -248,7 +255,13 @@ static int consul_watcher_thread(void* userdata) {
 
 static int consul_watch_keys_callback(consul_response_t* response, void* userdata) {
     ast_consul_watch_keys_callback cb = (ast_consul_watch_keys_callback) userdata;
-    cb(response->key_count, response->keys);
+    int success = consul_response_is_success(response);
+
+    if (success) {
+        cb(response->key_count, response->keys);
+    } else {
+        ast_log(LOG_ERROR, "watcher error %s\n", response->err->message);
+    }
     return 0;
 }
 
@@ -257,7 +270,7 @@ int ast_consul_watch_keys(const char *key, ast_consul_watch_keys_callback cb) {
 
     watcher = consul_watcher_create(active_client, CONSUL_KEYS, key, 1, 1, 1, consul_watch_keys_callback, cb, consul_parse_lsdir_response, CONSUL_WATCH_TIMEOUT);
     if (!watcher) {
-        ast_log(LOG_NOTICE, "error while registering kv watcher for %s\n", key);
+        ast_log(LOG_ERROR, "error while registering kv watcher for %s\n", key);
         return -1;
     }
 

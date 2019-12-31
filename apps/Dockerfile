@@ -12,4 +12,4 @@ ADD ari /apps/ari
 WORKDIR /apps
 RUN pip install -r requirements.txt
 
-CMD python /apps/astts.py --register
+CMD python /apps/astts.py

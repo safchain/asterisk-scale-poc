@@ -178,7 +178,7 @@ consul_response_t* consul_request_send(consul_request_t* req, CURL *curl) {
         if (resp->err == NULL) {
             resp->err = (consul_error_t*) calloc(1, sizeof(consul_error_t));
             resp->err->ecode = ERROR_REQUEST_FAILED;
-            resp->err->message = (char*) curl_easy_strerror(rc);
+            resp->err->message = strdup(curl_easy_strerror(rc));
         }
     }
 

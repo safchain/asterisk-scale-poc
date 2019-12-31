@@ -9,7 +9,7 @@ RUN apt-key add wazo_current.key
 RUN apt-get update
 RUN apt-get -y install asterisk asterisk-dev librabbitmq-dev make gcc libcurl4-openssl-dev \
     git jq asterisk-sounds-main strace net-tools lsof \
-    procps vim libjansson-dev
+    procps vim libjansson-dev curl
 
 # clean up previous conf
 RUN rm -rf /etc/asterisk/*
@@ -31,11 +31,11 @@ RUN make install
 RUN make samples
 
 # Install Asterisk consul app module
-#ADD asterisk-res-consul-stasis-app /usr/src/asterisk-res-consul-stasis-app
-#WORKDIR /usr/src/asterisk-res-consul-stasis-app
-#RUN make clean
-#RUN CFLAGS=-g make
-#RUN make install
+ADD asterisk-res-consul-stasis-app /usr/src/asterisk-res-consul-stasis-app
+WORKDIR /usr/src/asterisk-res-consul-stasis-app
+RUN make clean
+RUN CFLAGS=-g make
+RUN make install
 
 ADD wazo-res-amqp /usr/src/wazo-res-amqp
 WORKDIR /usr/src/wazo-res-amqp
@@ -51,4 +51,6 @@ RUN make install
 
 ADD etc/asterisk/* /etc/asterisk/
 
-ENTRYPOINT /usr/sbin/asterisk -f
+ADD ./entry.sh /
+
+ENTRYPOINT /entry.sh
