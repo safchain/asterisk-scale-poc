@@ -50,12 +50,6 @@
 						<para>Specifies the name of the connection from amqp.conf to use</para>
 					</description>
 				</configOption>
-				<configOption name="queue">
-					<synopsis>Name of the queue to post to</synopsis>
-					<description>
-						<para>Defaults to asterisk_stasis</para>
-					</description>
-				</configOption>
 				<configOption name="exchange">
 					<synopsis>Name of the exchange to post to</synopsis>
 					<description>
@@ -125,10 +119,9 @@ struct stasis_amqp_global_conf {
 	AST_DECLARE_STRING_FIELDS(
 								 /*! \brief connection name */
 								 AST_STRING_FIELD(connection);
-								 /*! \brief queue name */
-								 AST_STRING_FIELD(queue);
 								 /*! \brief exchange name */
-								 AST_STRING_FIELD(exchange););
+								 AST_STRING_FIELD(exchange);
+		);
 };
 
 /*! \brief Locking container for safe configuration access. */
@@ -323,8 +316,6 @@ static void stasis_amqp_message_handler(void *data, const char *app_name,
 	}
 
 	publish_to_amqp(routing_key, "stasis_app", NULL, message);
-
-	return;
 }
 
 
@@ -437,9 +428,8 @@ static int stasis_amqp_channel_log(struct stasis_message *message)
 		return -1;
 	}
 
-	publish_to_amqp(routing_key, "stasis_channel", stasis_message_eid(message), json);
-
-	return 0;
+	return publish_to_amqp(routing_key, "stasis_channel", stasis_message_eid(message),
+						   json);
 }
 
 struct ast_eid *eid_copy(const struct ast_eid *eid)
@@ -455,6 +445,22 @@ struct ast_eid *eid_copy(const struct ast_eid *eid)
 		new->eid[i] = eid->eid[i];
 	}
 	return new;
+}
+
+static int cxn_create_handler(struct ast_amqp_connection *amqp)
+{
+	RAII_VAR(struct stasis_amqp_conf *, conf, NULL, ao2_cleanup);
+
+	conf = ao2_global_obj_ref(confs);
+
+	ast_assert(conf && conf->global &&conf->global);
+
+	if (strlen(conf->global->exchange) > 0) {
+		ast_log(LOG_DEBUG, "declare exchange for newly connection\n");
+		return ast_amqp_declare_exchange(amqp, conf->global->exchange, "topic");
+	}
+
+	return 0;
 }
 
 static int publish_to_amqp(const char *topic, const char *name, const struct ast_eid *eid,
@@ -524,7 +530,8 @@ static int publish_to_amqp(const char *topic, const char *name, const struct ast
 
 	ast_assert(conf && conf->global &&conf->global->connection);
 
-	struct ast_amqp_connection *amqp = ast_amqp_get_or_create_connection(conf->global->connection);
+	struct ast_amqp_connection *amqp =
+		ast_amqp_get_or_create_connection(conf->global->connection, cxn_create_handler);
 	if (!amqp) {
 		ast_log(LOG_ERROR, "Failed to get an AMQP connection\n");
 		return -1;
@@ -556,9 +563,6 @@ static int load_config(int reload)
 	aco_option_register(&cfg_info, "connection", ACO_EXACT,
 						global_options, "", OPT_STRINGFIELD_T, 0,
 						STRFLDSET(struct stasis_amqp_global_conf, connection));
-	aco_option_register(&cfg_info, "queue", ACO_EXACT,
-						global_options, "asterisk_stasis", OPT_STRINGFIELD_T, 0,
-						STRFLDSET(struct stasis_amqp_global_conf, queue));
 	aco_option_register(&cfg_info, "exchange", ACO_EXACT,
 						global_options, "", OPT_STRINGFIELD_T, 0,
 						STRFLDSET(struct stasis_amqp_global_conf, exchange));
@@ -591,56 +595,6 @@ static int unload_module(void)
 	sub = NULL;
 	manager = NULL;
 	return 0;
-}
-
-static void stasis_app_message_handler(void *data, const char *app_name,
-									   struct ast_json *message)
-{
-	RAII_VAR(char *, routing_key, NULL, ast_free);
-	const char *routing_key_prefix = "stasis.app";
-
-	if (!(routing_key = new_routing_key(routing_key_prefix, app_name))) {
-		return;
-	}
-
-	publish_to_amqp(routing_key, "stasis_app", NULL, message);
-
-	return;
-}
-
-int register_to_new_stasis_app(const void *data)
-{
-	struct ao2_container *apps;
-	struct ao2_iterator it_apps;
-	char *app;
-	int res = 0;
-
-	if (ast_sched_add(stasis_app_sched_context, 1000, register_to_new_stasis_app, NULL) ==
-		-1) {
-		ast_log(LOG_ERROR, "failed to reschedule the stasis app registration\n");
-		return -1;
-	}
-
-	/* Subscription to receive all of the messages from ari applications registered */
-	if (!(apps = stasis_app_get_all())) {
-		ast_log(LOG_ERROR, "Unable to retrieve registered applications!\n");
-		return -1;
-	}
-
-	it_apps = ao2_iterator_init(apps, 0);
-	while ((app = ao2_iterator_next(&it_apps))) {
-		struct app *new_app = allocate_app(app);
-		if (ao2_find(registered_apps, new_app, OBJ_SEARCH_OBJECT)) {
-			continue;
-		}
-		ao2_link(registered_apps, new_app);
-		stasis_app_register_all(app, &stasis_app_message_handler, NULL);
-		ao2_ref(app, -1);
-	}
-	ao2_iterator_destroy(&it_apps);
-	ao2_ref(apps, -1);
-
-	return res;
 }
 
 int ast_subscribe_to_stasis(const char *app_name)

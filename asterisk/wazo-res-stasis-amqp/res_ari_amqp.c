@@ -141,7 +141,6 @@ static int load_module(void)
 {
 	int res = 0;
 
-
 	res |= ast_ari_add_handler(&amqp);
 	if (res) {
 		unload_module();

@@ -1,4 +1,3 @@
 [global]
 ;connection = bunny      ; Connection name in amqp.conf
-;queue = asterisk_stasis ; Queue name to publish to; defaults to asterisk_cdr
 ;exchange =              ; Exchange to publish to; defaults to empty string

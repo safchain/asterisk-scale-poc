@@ -46,6 +46,15 @@
 struct ast_amqp_connection;
 
 /*!
+ * \brief Callback for new connection creation.
+ *
+ * This callback is called when a new connection is created.
+ *
+ * \param cxn the newly connection created.
+ */
+typedef int (*ast_amqp_cxn_create_cb)(struct ast_amqp_connection * amqp);
+
+/*!
  * \brief Gets the given AMQP connection.
  *
  * The returned connection is an AO2 managed object, which must be freed with
@@ -64,10 +73,13 @@ struct ast_amqp_connection *ast_amqp_get_connection(const char *name);
  * \ref ao2_cleanup().
  *
  * \param name The name of the connection.
+ * \param handler optional handler called when a new connection is created.
  * \return The connection object.
  * \return \c NULL if connection not found, or some other error.
  */
-struct ast_amqp_connection *ast_amqp_get_or_create_connection(const char *name);
+struct ast_amqp_connection *ast_amqp_get_or_create_connection(const char *name,
+															  ast_amqp_cxn_create_cb
+															  handler);
 
 /*!
  * \brief Publishes a message to a AMQP connection.
@@ -92,5 +104,17 @@ int ast_amqp_basic_publish(struct ast_amqp_connection *cxn,
 						   amqp_boolean_t mandatory,
 						   amqp_boolean_t immediate,
 						   const amqp_basic_properties_t * properties, amqp_bytes_t body);
+
+/*!
+ * \brief Declare an exchange.
+ *
+ * \param cxn the connection to be used for the exchange declaration.
+ * \param exchange the name of the exchange to declare
+ * \param type type of the exchange
+ * \return 0 on success.
+ * \return -1 on failure.
+ */
+int ast_amqp_declare_exchange(struct ast_amqp_connection *cxn,
+							  const char *exchange, const char *type);
 
 #endif /* _ASTERISK_AMQP_H */

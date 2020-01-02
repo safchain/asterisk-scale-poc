@@ -244,7 +244,9 @@ struct ast_amqp_connection *ast_amqp_get_connection(const char *name)
 	return cxn;
 }
 
-struct ast_amqp_connection *ast_amqp_get_or_create_connection(const char *name)
+struct ast_amqp_connection *ast_amqp_get_or_create_connection(const char *name,
+															  ast_amqp_cxn_create_cb
+															  handler)
 {
 	SCOPED_AO2LOCK(connections_lock, active_connections);
 	struct ast_amqp_connection *cxn =
@@ -262,9 +264,37 @@ struct ast_amqp_connection *ast_amqp_get_or_create_connection(const char *name)
 			ao2_cleanup(cxn);
 			return NULL;
 		}
+
+		if (handler) {
+			if (handler(cxn) == -1) {
+				ast_log(LOG_ERROR, "Error from connection creation hanlder\n");
+				ao2_cleanup(cxn);
+				return NULL;
+			}
+		}
 	}
 
 	return cxn;
+}
+
+int ast_amqp_declare_exchange(struct ast_amqp_connection *cxn,
+							  const char *exchange, const char *type)
+{
+	if (!cxn || !cxn->state) {
+		return -1;
+	}
+
+	{
+		SCOPED_AO2LOCK(lock, cxn);
+		if (amqp_exchange_declare(cxn->state, CHANNEL_ID, amqp_cstring_bytes(exchange),
+								  amqp_cstring_bytes(type), 0, 1, 0, 0,
+								  amqp_empty_table) == 0) {
+			ast_log(LOG_ERROR, "Error declaring exchange\n");
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 int ast_amqp_basic_publish(struct ast_amqp_connection *cxn,

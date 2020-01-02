@@ -216,7 +216,7 @@ static char *cli_test_send(struct ast_cli_entry *e, int cmd, struct ast_cli_args
 		return CLI_SHOWUSAGE;
 	}
 
-	cxn = ast_amqp_get_or_create_connection(a->argv[4]);
+	cxn = ast_amqp_get_or_create_connection(a->argv[4], NULL);
 	if (!cxn) {
 		ast_cli(a->fd, "No connection named %s\n", a->argv[4]);
 		return NULL;

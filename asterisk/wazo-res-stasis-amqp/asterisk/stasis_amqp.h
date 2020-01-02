@@ -19,8 +19,22 @@
 #ifndef ASTERISK_STASIS_AMQP_H
 #define ASTERISK_STASIS_AMQP_H
 
+/*!
+ * \brief Subscribe to stasis and publish events to AMQP.
+ *
+ * \param app_name name of the application to be created.
+ * \return 0 on success.
+ * \return -1 on failure.
+ */
 int ast_subscribe_to_stasis(const char *app_name);
 
+/*!
+ * \brief Unsubscribe from stasis.
+ *
+ * \param app_name name of the application to remove.
+ * \return 0 on success.
+ * \return -1 on failure.
+ */
 int ast_unsubscribe_from_stasis(const char *app_name);
 
 #endif //ASTERISK_STASIS_AMQP_H
