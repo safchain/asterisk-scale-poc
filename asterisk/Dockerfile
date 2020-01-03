@@ -38,13 +38,13 @@ RUN CFLAGS=-g make
 RUN make install
 RUN make samples
 
-ADD wazo-res-amqp /usr/src/wazo-res-amqp
+RUN git clone --single-branch --branch scale https://github.com/wazo-platform/wazo-res-amqp.git /usr/src/wazo-res-amqp
 WORKDIR /usr/src/wazo-res-amqp
 RUN make clean
 RUN CFLAGS=-g make
 RUN make install
 
-ADD wazo-res-stasis-amqp /usr/src/wazo-res-stasis-amqp
+RUN git clone --single-branch --branch scale https://github.com/wazo-platform/wazo-res-stasis-amqp.git /usr/src/wazo-res-stasis-amqp
 WORKDIR /usr/src/wazo-res-stasis-amqp
 RUN make clean
 RUN CFLAGS="-I../wazo-res-amqp -g" make

@@ -1,3 +1,0 @@
-[global]
-;connection = bunny      ; Connection name in amqp.conf
-;exchange =              ; Exchange to publish to; defaults to empty string
