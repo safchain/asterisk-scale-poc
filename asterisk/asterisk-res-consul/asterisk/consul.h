@@ -24,8 +24,7 @@
  * \since 1.x
  *
  * This file contains the Asterisk API for Consul. Connections are configured
- * in \c res_consul.conf. You can get a consul client using \ref
- * ast_consul_get_client().
+ * in \c res_consul.conf.
  *
  */
 
@@ -42,7 +41,7 @@ struct ast_consul_service_check {
    int interval;
 };
 
-typedef int (*ast_consul_watch_keys_callback) (int key_count, const char **keys);
+typedef int (*ast_consul_watch_keys_callback) (int key_count, char **keys);
 
 /*!
  * \brief Gets a Consul client.

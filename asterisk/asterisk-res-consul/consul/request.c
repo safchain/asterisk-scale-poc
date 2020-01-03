@@ -132,8 +132,9 @@ consul_response_t* consul_response_create() {
 
 void consul_request_setopt(consul_request_t* req, consul_response_t* resp, CURL *curl) {
     curl_easy_reset(curl);
+
     curl_easy_setopt(curl, CURLOPT_CURLU, req->url);
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, http_method[req->method]);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, http_method[req->method]);
     if (req->client->settings.user) {
         curl_easy_setopt(curl, CURLOPT_USERNAME, req->client->settings.user);
     }
@@ -204,9 +205,6 @@ void consul_response_reset(consul_response_t* response) {
         response->key = NULL;
     }
 
-    response->chunked = 0;
-    response->data = NULL;
-    response->data_length = 0;
     if (response->keys) {
         for (int i = 0; i < response->key_count; i++) {
             free(response->keys[i]);
@@ -215,6 +213,8 @@ void consul_response_reset(consul_response_t* response) {
         response->key_count = 0;
         response->keys = NULL;
     }
+
+    memset(response, 0, sizeof(consul_response_t));
 }
 
 void consul_response_cleanup(consul_response_t* response) {
