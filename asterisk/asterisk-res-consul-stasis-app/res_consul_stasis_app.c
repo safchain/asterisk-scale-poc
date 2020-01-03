@@ -87,8 +87,8 @@ static int register_application(const char* app_name) {
 
 	int res = ast_subscribe_to_stasis(app_name);
 	if (!res) {
-		char* service_id = (char*) ast_calloc(1, strlen(app_name) + 7);
-		sprintf(service_id, "stasis/%s", app_name);
+		char* service_id = (char*) ast_calloc(1, strlen(app_name) + 7 + sizeof(asterisk_eid));
+		sprintf(service_id, "stasis/%s/%s", asterisk_eid, app_name);
 
 		ast_log(LOG_NOTICE, "application %s registered\n", app_name);
 		ast_consul_service_register(
@@ -111,7 +111,10 @@ static int register_application(const char* app_name) {
 static int unregister_application(const char *app) {
 	stasis_app_unregister(app);
 	ast_log(LOG_NOTICE, "application %s unregistered\n", app);
-	ast_consul_service_deregister(app);
+	char* service_id = (char*) ast_calloc(1, strlen(app) + 7 + sizeof(asterisk_eid));
+	sprintf(service_id, "stasis/%s/%s", asterisk_eid, app);
+	ast_consul_service_deregister(service_id);
+	ast_free(service_id);
 	return 0;
 }
 
