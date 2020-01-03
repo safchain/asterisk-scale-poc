@@ -36,6 +36,7 @@ WORKDIR /usr/src/asterisk-res-consul-stasis-app
 RUN make clean
 RUN CFLAGS=-g make
 RUN make install
+RUN make samples
 
 ADD wazo-res-amqp /usr/src/wazo-res-amqp
 WORKDIR /usr/src/wazo-res-amqp
