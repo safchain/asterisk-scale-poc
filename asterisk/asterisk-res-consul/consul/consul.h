@@ -42,7 +42,6 @@ typedef struct consul_watcher_t {
     int                       server_count;
     int                       recursive;
     int                       index;
-    int                       once;
     int                       keys;
     enum CONSUL_API_TYPE      type;
     const char*               key;
@@ -94,7 +93,7 @@ typedef struct consul_response_t {
     uint modify_index;
     struct {
         int key_count;
-        const char** keys;
+        char** keys;
     };
     struct {
         int lock_index;

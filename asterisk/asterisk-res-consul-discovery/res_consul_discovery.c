@@ -84,10 +84,7 @@
 			<configObject name="general">
 				<synopsis>Global configuration settings</synopsis>
 				<configOption name="enabled">
-					<synopsis>Enable/disable the consul module</synopsis>
-				</configOption>
-				<configOption name="debug">
-					<synopsis>Enable/disable debug</synopsis>
+					<synopsis>Enable/disable the Consul discovery module.</synopsis>
 				</configOption>
 			</configObject>
 		</configFile>

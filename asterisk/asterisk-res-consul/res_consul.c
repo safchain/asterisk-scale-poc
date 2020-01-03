@@ -93,10 +93,42 @@
                 <configOption name="enabled">
                     <synopsis>Enable/disable the Consul module</synopsis>
                 </configOption>
-                <configOption name="debug">
-                    <synopsis>Enable/disable debug</synopsis>
-                </configOption>
             </configObject>
+            <configObject name="connection">
+                <synopsis>Per-connection configuration settings</synopsis>
+                <configOption name="type">
+                   <synopsis>Define this configuration section as a connection.</synopsis>
+                   <description>
+                       <enumlist>
+                           <enum name="connection"><para>Configure this section as a <replaceable>connection</replaceable></para></enum>
+                       </enumlist>
+                   </description>
+               </configOption>
+               <configOption name="url">
+                   <synopsis>URL to connect to</synopsis>
+                   <description>
+                       <para>URL of the AMQP server to connect to. Is of the form <literal>amqp://[$USERNAME[:$PASSWORD]@]$HOST[:$PORT]/[$VHOST]</literal></para>
+                   </description>
+               </configOption>
+               <configOption name="password">
+                   <synopsis>Password for AMQP login</synopsis>
+                   <description>
+                       <para>When the AMQP server requires login, specified the login password</para>
+                   </description>
+               </configOption>
+               <configOption name="max_frame_bytes">
+                   <synopsis>The maximum size of an AMQP frame on the wire to request of the broker for this connection.</synopsis>
+                   <description>
+                       <para>4096 is the minimum size, 2^31-1 is the maximum</para>
+                   </description>
+               </configOption>
+               <configOption name="heartbeat_seconds">
+                   <synopsis>the number of seconds between heartbeat frames to request of the broker</synopsis>
+                   <description>
+                       <para>A value of 0 disables heartbeats.</para>
+                   </description>
+               </configOption>
+           </configObject>
         </configFile>
     </configInfo>
  ***/
@@ -208,7 +240,7 @@ int ast_consul_service_register(const char* id,
         while (checks[checks_count])
             checks_count++;
 
-        service.checks = (consul_service_t**) ast_calloc(checks_count+1, sizeof(consul_check_t*));
+        service.checks = (consul_check_t**) ast_calloc(checks_count+1, sizeof(consul_check_t*));
         for (i = 0; i < checks_count; i++) {
             service.checks[i] = (struct consul_check_t*) ast_calloc(1, sizeof(consul_check_t));
             service.checks[i]->http = checks[i]->http;
@@ -242,11 +274,14 @@ int ast_consul_service_set_maintenance(const char *id, int state, const char *re
 }
 
 static int consul_watcher_thread(void* userdata) {
+    int rc;
     consul_watcher_t* watchers[2] = { (consul_watcher_t*) userdata, NULL };
 
-    if (consul_multi_watch(active_client, watchers)) {
-        return -1;
+    if ((rc = consul_multi_watch(active_client, watchers))) {
+        return rc;
     }
+
+    ast_log(LOG_NOTICE, "stopping watcher thread\n");
 
     consul_watcher_destroy(watchers[0]);
 
@@ -255,7 +290,7 @@ static int consul_watcher_thread(void* userdata) {
 
 static int consul_watch_keys_callback(consul_response_t* response, void* userdata) {
     ast_consul_watch_keys_callback cb = (ast_consul_watch_keys_callback) userdata;
-    int success = consul_response_is_success(response);
+    int success = response->err && (response->err->ecode == 200 || response->err->ecode == 404);
 
     if (success) {
         cb(response->key_count, response->keys);

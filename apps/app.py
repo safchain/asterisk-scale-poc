@@ -246,6 +246,7 @@ class Application:
             pass
 
     async def register_consul(self, loop):
+        app_registered = False
         try:
             c = consul.aio.Consul(
                 host=self.context.consul_host,
@@ -253,18 +254,20 @@ class Application:
 
             revision = 1
             while True:
-                logger.info(
-                    "Registering application %s in Consul" % self.name)
                 try:
+                    logger.info(
+                        "Registering application %s in Consul" % self.name)
+                    if not app_registered:
+                        response = await c.kv.put("applications/%s" % self.name,
+                                                  "%d" % revision)
+                        if response is not True:
+                            raise Exception(
+                                "error",
+                                "registering application %s" % self.name)
+                        app_registered = True
+
                     service_id = "apps/%s" % self.id
                     service_name = self.name
-
-                    response = await c.kv.put("applications/%s" % self.name,
-                                              "%d" % revision)
-                    if response is not True:
-                        raise Exception(
-                            "error",
-                            "registering application %s" % self.name)
 
                     response = await c.agent.service.register(
                         service_name, service_id=service_id,

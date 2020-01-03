@@ -21,6 +21,9 @@ else
 	DOCUMENTATION_DIR:=$(INSTALL_PREFIX)$(DOCDIR)
 endif
 INSTALL = install
+ASTETCDIR = $(INSTALL_PREFIX)/etc/asterisk
+SAMPLENAME = res_consul_stasis_app.conf.sample
+CONFNAME = $(basename $(SAMPLENAME))
 
 TARGET = res_consul_stasis_app.so
 OBJECTS = res_consul_stasis_app.o
@@ -51,6 +54,10 @@ install: $(TARGET)
 	@echo " +                                                       +"
 	@echo " +              make samples                             +"
 	@echo " +-------------------------------------------------------+"
+
+samples:
+	$(INSTALL) -m 644 $(SAMPLENAME) $(DESTDIR)$(ASTETCDIR)/$(CONFNAME)
+	@echo " ------- res_consul_stasis_app config installed ---------"
 
 clean:
 	rm -f $(OBJECTS)

@@ -105,7 +105,7 @@ consul_request_t* consul_client_request_create_get(consul_client_t *client, cons
     CURLU *url = consul_url_create(CONSUL_API_VERSION, CONSUL_KEYS, key);
 
     if (keys) {
-        curl_url_set(url, CURLUPART_QUERY, "keys=", CURLU_APPENDQUERY);
+        curl_url_set(url, CURLUPART_QUERY, "keys=true", CURLU_APPENDQUERY);
         curl_url_set(url, CURLUPART_QUERY, "separator=%2F", CURLU_APPENDQUERY);
     }
 

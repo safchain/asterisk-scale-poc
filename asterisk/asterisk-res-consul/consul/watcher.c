@@ -5,6 +5,8 @@
 
 static CURLU* consul_watcher_build_url(consul_client_t *client, consul_watcher_t *watcher) {
     CURLU* url = consul_url_create(CONSUL_API_VERSION, watcher->type, watcher->key);
+    if (!url)
+        return NULL;
 
     char wait_param[64];
     snprintf(wait_param, 64, "wait=%ds", watcher->wait_timeout);
@@ -41,6 +43,7 @@ consul_watcher_t* consul_watcher_create(consul_client_t *client, enum CONSUL_API
         watch->wait_timeout = wait_timeout;
         watch->userdata = userdata;
         watch->parser = parser;
+        watch->index = 1;
 
         watch->request = consul_client_request_create_get(client, key, recursive, keys);
         watch->response = consul_cluster_request(client, watch->request);
@@ -63,6 +66,7 @@ int consul_watcher_reset(consul_watcher_t *watcher) {
 
     if (watcher->request->url)
         free(watcher->request->url);
+
     watcher->request->url = consul_watcher_build_url(watcher->client, watcher);
 
     consul_response_reset(watcher->response);
@@ -78,14 +82,14 @@ int consul_watcher_reset(consul_watcher_t *watcher) {
 }
 
 static int consul_check_watchers(consul_client_t *cli, CURLM *mcurl) {
-    uint index;
-    int     added, ignore;
+    uint index = 0;
+    int error = 0;
+    int ignore;
     CURLMsg *msg;
-    CURL    *curl;
+    CURL *curl;
     consul_watcher_t *watcher;
     consul_response_t *resp;
-    added = 0;
-    index = 0;
+
     while ((msg = curl_multi_info_read(mcurl, &ignore)) != NULL) {
         if (msg->msg == CURLMSG_DONE) {
             curl = msg->easy_handle;
@@ -94,19 +98,13 @@ static int consul_check_watchers(consul_client_t *cli, CURLM *mcurl) {
             resp = watcher->response;
             index = watcher->index;
             if (msg->data.result != CURLE_OK) {
-                if (watcher->attempts) {
+                if (watcher->attempts > 1) {
                     cli->leader = (cli->leader + 1) % cli->server_count;
-                    curl_multi_remove_handle(mcurl, curl);
-                    curl_easy_reset(watcher->curl);
-                    consul_watcher_reset(watcher);
-                    curl_multi_add_handle(mcurl, watcher->curl);
-                    ++added;
                     watcher->attempts--;
-                    continue;
-                } else {
-                    resp->err = calloc(1, sizeof(consul_error_t));
-                    resp->err->ecode = ERROR_CLUSTER_FAILED;
-                    resp->err->message = strdup("all cluster servers failed.");
+                    error = ERROR_REQUEST_FAILED;
+                } else if (watcher->attempts == 1) {
+                    watcher->attempts--;
+                    error = resp->err->ecode = ERROR_CLUSTER_FAILED;
                 }
             }
 
@@ -114,25 +112,16 @@ static int consul_check_watchers(consul_client_t *cli, CURLM *mcurl) {
                 consul_response_parse(resp, watcher->parser);
 
                 if (watcher->callback && resp->modify_index > index) {
-                    watcher->callback(resp, watcher->userdata);
+                    error = watcher->callback(resp, watcher->userdata);
                 }
 
-                index = resp->modify_index;
-            } else {
-                curl_multi_remove_handle(mcurl, curl);
-                consul_watcher_destroy(watcher);
+                watcher->index = resp->modify_index;
             }
 
-            if (!watcher->once) {
+            if (!error) {
                 curl_multi_remove_handle(mcurl, curl);
-
-                if (watcher->index) {
-                    watcher->index = index;
-                }
-
                 consul_watcher_reset(watcher);
                 curl_multi_add_handle(mcurl, watcher->curl);
-                ++added;
                 continue;
             }
 
@@ -140,15 +129,13 @@ static int consul_check_watchers(consul_client_t *cli, CURLM *mcurl) {
             consul_watcher_destroy(watcher);
         }
     }
-    return added;
+
+    return error;
 }
 
 int consul_multi_watch(consul_client_t *client, consul_watcher_t **watchers) {
-    int              count;
-    int              maxfd, left, added;
-    long             timeout;
+    int              maxfd, left, error;
     long             backoff, backoff_max;
-    fd_set           r, w, e;
     consul_watcher_t *watcher;
     CURLM            *mcurl;
     CURLMcode        mc;
@@ -166,16 +153,16 @@ int consul_multi_watch(consul_client_t *client, consul_watcher_t **watchers) {
 
     for(;;) {
         mc = curl_multi_perform(mcurl, &left);
-        if(mc == CURLM_OK ) {
+        if (mc == CURLM_OK) {
             mc = curl_multi_wait(mcurl, NULL, 0, 1000, &maxfd);
         }
-
-        if(mc != CURLM_OK) {
+        if (mc != CURLM_OK) {
+            fprintf(stderr, "error curl_multi_perform: %s\n", curl_multi_strerror(mc));
             break;
         }
 
-        added = consul_check_watchers(client, mcurl);
-        if (added == 0 && left == 0) {
+        error = consul_check_watchers(client, mcurl);
+        if (error || left == 0) {
             if (backoff < backoff_max) {
                 backoff = 2 * backoff;
             } else {
@@ -189,7 +176,7 @@ int consul_multi_watch(consul_client_t *client, consul_watcher_t **watchers) {
     }
 
     curl_multi_cleanup(mcurl);
-    return count;
+    return mc != CURLM_OK;
 }
 
 void consul_watcher_destroy(consul_watcher_t* watch) {
