@@ -55,6 +55,7 @@ size_t consul_header_callback(char *buffer, size_t size,
     int count = nitems * size;
 
     resp = (consul_response_t*) userdata;
+
     if (!resp->err) {
         resp->err = (consul_error_t*) calloc(1, sizeof(consul_error_t));
 
@@ -147,6 +148,7 @@ void consul_request_setopt(consul_request_t* req, consul_response_t* resp, CURL 
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, consul_header_callback);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, resp);
 
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, consul_body_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, resp);
 
@@ -165,15 +167,15 @@ void consul_request_setopt(consul_request_t* req, consul_response_t* resp, CURL 
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req->client->settings.connect_timeout);
 }
 
-consul_response_t* consul_request_send(consul_request_t* req, CURL *curl) {
+consul_response_t* consul_request_send(consul_request_t* req) {
     CURLMcode rc;
     consul_response_t* resp = NULL;
 
     resp = (consul_response_t*) calloc(1, sizeof(consul_response_t));
 
-    consul_request_setopt(req, resp, curl);
+    consul_request_setopt(req, resp, req->curl);
 
-    rc = curl_easy_perform(curl);
+    rc = curl_easy_perform(req->curl);
 
     if (rc != CURLM_OK) {
         if (resp->err == NULL) {
@@ -214,6 +216,11 @@ void consul_response_reset(consul_response_t* response) {
         response->keys = NULL;
     }
 
+    if (response->data) {
+        free(response->data);
+        response->data = NULL;
+    }
+
     memset(response, 0, sizeof(consul_response_t));
 }
 
@@ -222,8 +229,9 @@ void consul_response_cleanup(consul_response_t* response) {
     free(response);
 }
 
-consul_request_t* consul_client_request_create(consul_client_t* client, consul_server_t* server, enum HTTP_METHOD method, CURLU* url, const char *data) {
+consul_request_t* consul_client_request_create(consul_client_t* client, enum HTTP_METHOD method, CURLU* url, const char *data) {
     consul_request_t* req = (consul_request_t*) calloc(1, sizeof(consul_request_t));
+    req->curl = curl_easy_init();
     req->method = method;
     req->url = url;
     req->client = client;
@@ -253,6 +261,12 @@ void consul_request_set_server(consul_request_t* request, consul_server_t* serve
     curl_url_set(request->url, CURLUPART_PORT, server->port, 0);
 }
 
+void consul_request_cleanup(consul_request_t* request) {
+    curl_easy_cleanup(request->curl);
+    if (request->data)
+        free((void*) request->data);
+}
+
 consul_response_t* consul_cluster_request(consul_client_t* client, consul_request_t* req) {
     consul_response_t* resp;
     int i;
@@ -260,7 +274,7 @@ consul_response_t* consul_cluster_request(consul_client_t* client, consul_reques
     for (i = 0; i < client->server_count; i++) {
         consul_request_set_server(req, client->servers[client->leader]);
 
-        resp = consul_request_send(req, client->curl);
+        resp = consul_request_send(req);
 
         if (!resp || !resp->err || resp->err->ecode == ERROR_REQUEST_FAILED) {
             client->leader = (client->leader + 1) % client->server_count;

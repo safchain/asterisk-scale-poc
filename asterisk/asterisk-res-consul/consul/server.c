@@ -18,6 +18,8 @@ consul_server_t* consul_server_create(const char *url) {
         curl_url_get(curlu, CURLUPART_SCHEME, &server->scheme, 0);
         curl_url_get(curlu, CURLUPART_HOST, &server->host, 0);
         curl_url_get(curlu, CURLUPART_PORT, &server->port, 0);
+
+        curl_url_cleanup(curlu);
     }
 
     return server;
