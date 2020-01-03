@@ -43,38 +43,24 @@
                </configOption>
            </configObject>
 
-           <configObject name="connection">
-               <synopsis>Per-connection configuration settings</synopsis>
-               <configOption name="type">
-                   <synopsis>Define this configuration section as a connection.</synopsis>
+           <configObject name="consul">
+               <synopsis>Consul connection configuration settings</synopsis>
+               <configOption name="host">
+                   <synopsis>Host to connect to</synopsis>
                    <description>
-                       <enumlist>
-                           <enum name="connection"><para>Configure this section as a <replaceable>connection</replaceable></para></enum>
-                       </enumlist>
+                       <para>Hostname of the Consul server to connect to.</para>
                    </description>
                </configOption>
-               <configOption name="url">
-                   <synopsis>URL to connect to</synopsis>
+               <configOption name="port">
+                   <synopsis>Consul port number</synopsis>
                    <description>
-                       <para>URL of the AMQP server to connect to. Is of the form <literal>amqp://[$USERNAME[:$PASSWORD]@]$HOST[:$PORT]/[$VHOST]</literal></para>
-                   </description>
+                       <para>Port of the Consul server.
+					</description>
                </configOption>
-               <configOption name="password">
-                   <synopsis>Password for AMQP login</synopsis>
+               <configOption name="token">
+                   <synopsis>Consul authentication token</synopsis>
                    <description>
-                       <para>When the AMQP server requires login, specified the login password</para>
-                   </description>
-               </configOption>
-               <configOption name="max_frame_bytes">
-                   <synopsis>The maximum size of an AMQP frame on the wire to request of the broker for this connection.</synopsis>
-                   <description>
-                       <para>4096 is the minimum size, 2^31-1 is the maximum</para>
-                   </description>
-               </configOption>
-               <configOption name="heartbeat_seconds">
-                   <synopsis>the number of seconds between heartbeat frames to request of the broker</synopsis>
-                   <description>
-                       <para>A value of 0 disables heartbeats.</para>
+                       <para>Token to use to connect to the Consul server.</para>
                    </description>
                </configOption>
            </configObject>
