@@ -182,4 +182,9 @@ int consul_multi_watch(consul_client_t *client, consul_watcher_t **watchers) {
 void consul_watcher_destroy(consul_watcher_t* watch) {
     if (watch->curl)
         curl_easy_cleanup(watch->curl);
+    if (watch->request)
+        consul_request_cleanup(watch->request);
+    if (watch->response)
+        consul_response_cleanup(watch->response);
+    free(watch);
 }

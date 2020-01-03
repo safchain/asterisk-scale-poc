@@ -61,7 +61,6 @@ typedef struct consul_server_t {
 } consul_server_t;
 
 typedef struct consul_client_t {
-    CURL *curl;
     consul_server_t** servers;
     int    server_count;
     int leader;
@@ -133,7 +132,7 @@ typedef struct consul_service_t {
 
 typedef struct consul_request_t {
     enum HTTP_METHOD method;
-    CURL* curl;
+    CURL *curl;
     CURLU* url;
     const char *data;
     consul_client_t* client;
@@ -154,8 +153,6 @@ consul_response_t *consul_client_get(consul_client_t *client, const char *key, i
 consul_response_t *consul_client_delete(consul_client_t *client, const char *key);
 consul_response_t *consul_client_mkdir(consul_client_t *client, const char *key);
 consul_response_t *consul_client_rmdir(consul_client_t *client, const char *key, int recursive);
-consul_request_t* consul_client_request_create(consul_client_t* client, consul_server_t* server, enum HTTP_METHOD method, CURLU* url, const char *data);
-consul_request_t* consul_client_request_create_get(consul_client_t *client, const char *key, int recursive, int keys);
 int consul_multi_watch(consul_client_t *client, consul_watcher_t **watchers);
 
 consul_watcher_t* consul_watcher_create(consul_client_t *client, enum CONSUL_API_TYPE type, const char *key, int recursive, int keys, int initial, consul_watcher_callback_t cb, void *userdata, consul_response_parser parser, int wait_timeout);
@@ -165,9 +162,12 @@ void consul_watcher_destroy(consul_watcher_t* watch);
 size_t consul_header_callback(char *buffer, size_t size, size_t nitems, void *userdata);
 size_t consul_body_callback(void *contents, size_t length, size_t nmemb, void *userp);
 
+consul_request_t* consul_client_request_create(consul_client_t* client, enum HTTP_METHOD method, CURLU* url, const char *data);
+consul_request_t* consul_client_request_create_get(consul_client_t *client, const char *key, int recursive, int keys);
 void consul_request_set_server(consul_request_t* request, consul_server_t* server);
-consul_response_t* consul_request_send(consul_request_t* req, CURL *curl);
+consul_response_t* consul_request_send(consul_request_t* req);
 void consul_request_setopt(consul_request_t* req, consul_response_t* resp, CURL *curl);
+void consul_request_cleanup(consul_request_t* request);
 
 consul_response_t* consul_response_create(void);
 int consul_response_is_success(consul_response_t *response);

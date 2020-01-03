@@ -59,11 +59,9 @@ consul_response_t *consul_service_register(consul_client_t* client, consul_servi
 
     dump = json_dumps(obj, 0);
     url = consul_url_create(CONSUL_API_VERSION, CONSUL_AGENT_REGISTER, "");
-       req = consul_client_request_create(client, NULL, CONSUL_HTTP_PUT, url, dump);
+    req = consul_client_request_create(client, CONSUL_HTTP_PUT, url, dump);
     resp = consul_cluster_request(client, req);
-
-    curl_url_cleanup(url);
-    free(dump);
+    consul_request_cleanup(req);
     return resp;
 }
 
@@ -73,10 +71,9 @@ consul_response_t *consul_service_deregister(consul_client_t* client, const char
     CURLU *url;
 
     url = consul_url_create(CONSUL_API_VERSION, CONSUL_AGENT_DEREGISTER, service_id);
-    req = consul_client_request_create(client, NULL, CONSUL_HTTP_PUT, url, NULL);
+    req = consul_client_request_create(client, CONSUL_HTTP_PUT, url, NULL);
     resp = consul_cluster_request(client, req);
-
-    curl_url_cleanup(url);
+    consul_request_cleanup(req);
     return resp;
 }
 
@@ -97,9 +94,8 @@ consul_response_t *consul_service_set_maintenance(consul_client_t* client, const
         curl_url_set(url, CURLUPART_QUERY, reason_param, CURLU_APPENDQUERY);
     }
 
-    req = consul_client_request_create(client, NULL, CONSUL_HTTP_PUT, url, NULL);
+    req = consul_client_request_create(client, CONSUL_HTTP_PUT, url, NULL);
     resp = consul_cluster_request(client, req);
-
-    curl_url_cleanup(url);
+    consul_request_cleanup(req);
     return resp;
 }

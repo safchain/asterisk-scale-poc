@@ -13,10 +13,9 @@ consul_client_t* consul_client_create(int server_count, const char** servers) {
     if (server_count < 1)
         return NULL;
 
-    client->curl = curl_easy_init();
     client->server_count = server_count;
     client->servers = (consul_server_t**) calloc(server_count, sizeof(consul_server_t*));
-    client->settings.connect_timeout = 3000;
+    client->settings.connect_timeout = 5000;
     if (!client->servers)
         return NULL;
 
@@ -113,7 +112,7 @@ consul_request_t* consul_client_request_create_get(consul_client_t *client, cons
         curl_url_set(url, CURLUPART_QUERY, "recurse=true", CURLU_APPENDQUERY);
     }
 
-    return consul_client_request_create(client, NULL, CONSUL_HTTP_GET, url, NULL);
+    return consul_client_request_create(client, CONSUL_HTTP_GET, url, NULL);
 }
 
 consul_response_t *consul_client_get(consul_client_t *client, const char *key, int recursive, int keys) {
@@ -129,7 +128,7 @@ consul_response_t *consul_client_get(consul_client_t *client, const char *key, i
             consul_response_parse(resp, consul_parse_lsdir_response);
         }
     }
-
+    consul_request_cleanup(req);
     return resp;
 }
 
@@ -144,7 +143,7 @@ consul_response_t *consul_client_put(consul_client_t *client, const char *key, c
     CURLU *url;
 
     url = consul_url_create(CONSUL_API_VERSION, CONSUL_KEYS, key);
-    req = consul_client_request_create(client, NULL, CONSUL_HTTP_PUT, url, value);
+    req = consul_client_request_create(client, CONSUL_HTTP_PUT, url, value);
     resp = consul_cluster_request(client, req);
     if (resp) {
         consul_response_parse(resp, consul_parse_success);
@@ -160,7 +159,7 @@ consul_response_t *consul_client_delete(consul_client_t *client, const char *key
     CURLU *url;
 
     url = consul_url_create(CONSUL_API_VERSION, CONSUL_KEYS, key);
-    req = consul_client_request_create(client, NULL, CONSUL_HTTP_DELETE, url, NULL);
+    req = consul_client_request_create(client, CONSUL_HTTP_DELETE, url, NULL);
     resp = consul_cluster_request(client, req);
     if (resp) {
         consul_response_parse(resp, consul_parse_success);
@@ -178,7 +177,7 @@ consul_response_t *consul_client_mkdir(consul_client_t *client, const char *key)
 
     folder = consul_ensure_folder(key);
     url = consul_url_create(CONSUL_API_VERSION, CONSUL_KEYS, folder);
-    req = consul_client_request_create(client, NULL, CONSUL_HTTP_PUT, url, NULL);
+    req = consul_client_request_create(client, CONSUL_HTTP_PUT, url, NULL);
     resp = consul_cluster_request(client, req);
     if (resp) {
         consul_response_parse(resp, consul_parse_success);
@@ -200,7 +199,7 @@ consul_response_t *consul_client_rmdir(consul_client_t *client, const char *key,
     if (recursive){
         curl_url_set(url, CURLUPART_QUERY, "recursive=true", CURLU_APPENDQUERY);
     }
-    req = consul_client_request_create(client, NULL, CONSUL_HTTP_DELETE, url, NULL);
+    req = consul_client_request_create(client, CONSUL_HTTP_DELETE, url, NULL);
     resp = consul_cluster_request(client, req);
     if (resp) {
         consul_response_parse(resp, consul_parse_success);

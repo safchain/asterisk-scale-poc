@@ -252,7 +252,7 @@ int ast_consul_service_register(const char* id,
     success = consul_response_is_success(response);
 
     if (!success) {
-        ast_log(LOG_ERROR, "failed to register service %s\n", response->err->message);
+        ast_log(LOG_ERROR, "failed to register service %s\n", response->err ? response->err->message : "unknown error");
     }
 
     consul_response_cleanup(response);
@@ -345,12 +345,16 @@ static struct ast_cli_entry cli_consul[] = {
 static int reload_module(void)
 {
     load_config(1);
+
     return 0;
 }
 
 static int unload_module(void)
 {
-    load_res(0);
+    ast_threadpool_shutdown(watcher_thread_pool);
+
+    consul_client_destroy(active_client);
+
     return 0;
 }
 

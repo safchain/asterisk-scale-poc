@@ -76,6 +76,8 @@
 #include "asterisk/manager.h"
 #include "asterisk/strings.h"
 #include "asterisk/consul.h"
+#include "asterisk/threadpool.h"
+
 
 /*** DOCUMENTATION
 	<configInfo name="res_discovery_consul" language="en_US">
@@ -159,8 +161,10 @@ static struct discovery_config global_config = {
 
 static const char config_file[] = "res_consul_discovery.conf";
 
+struct ast_threadpool* discovery_thread_pool;
+
 /*! \brief Function called to register Asterisk service into Consul */
-static int consul_register(void)
+static int consul_register(void* userdata)
 {
 	int success;
 	struct ast_consul_service_check* checks[2] = { NULL, NULL };
@@ -178,15 +182,24 @@ static int consul_register(void)
 		checks[0]  = &httpstatus_check;
 	}
 
-	success = ast_consul_service_register(
-		global_config.id,
-		global_config.name,
-		global_config.discovery_ip,
-		global_config.discovery_port,
-		tags,
-		meta,
-		checks
-	);
+	while (1) {
+		success = ast_consul_service_register(
+			global_config.id,
+			global_config.name,
+			global_config.discovery_ip,
+			global_config.discovery_port,
+			tags,
+			meta,
+			checks
+		);
+
+		if (success)
+			break;
+
+		sleep(3);
+	}
+
+	ast_log(LOG_NOTICE, "registered Consul service %s\n", global_config.id);
 
 	manager_event(EVENT_FLAG_SYSTEM, "DiscoveryRegister", NULL);
 
@@ -349,8 +362,23 @@ static int load_res(int start)
 	int success;
 
 	if (start == 1) {
-		success = consul_register();
+		struct ast_threadpool_options threadpool_opts;
+		threadpool_opts.version = AST_THREADPOOL_OPTIONS_VERSION;
+		threadpool_opts.idle_timeout = 15;
+		threadpool_opts.auto_increment = 1;
+		threadpool_opts.initial_size = 0;
+		threadpool_opts.max_size = 1;
+		threadpool_opts.thread_start = threadpool_opts.thread_end = NULL;
+
+		discovery_thread_pool = ast_threadpool_create("consul-discovery", NULL, &threadpool_opts);
+		if (!discovery_thread_pool) {
+			ast_log(LOG_ERROR, "Failed to create Consul discovery thread pool");
+			return AST_MODULE_LOAD_DECLINE;
+		}
+
+		success = ast_threadpool_push(discovery_thread_pool, consul_register, NULL) == 0;
 	} else {
+	    ast_threadpool_shutdown(discovery_thread_pool);
 		success = consul_deregister();
 	}
 
@@ -432,7 +460,7 @@ static char *discovery_cli_set_maintenance(struct ast_cli_entry *e, int cmd, str
 static int manager_maintenance(struct mansession *s, const struct message *m)
 {
 	int success;
-	const char *enable = astman_get_header(m,"Enable");
+	const char *enable = astman_get_header(m, "Enable");
 
 	if (ast_strlen_zero(enable)) {
 			astman_send_error(s, m, "No action to enable or disable specified");
