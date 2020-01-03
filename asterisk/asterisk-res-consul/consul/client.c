@@ -56,7 +56,7 @@ int consul_parse_lsdir_response(consul_response_t* response, json_t* root) {
     for (int i = 0; i < count; i++){
         jstr = json_array_get(root, i);
         if (jstr == NULL || !json_is_string(jstr)) continue;
-        response->keys[i] = json_string_value(jstr);
+        response->keys[i] = (char*) json_string_value(jstr);
     }
 
     return 0;

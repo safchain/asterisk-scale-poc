@@ -52,6 +52,4 @@ RUN make install
 
 ADD etc/asterisk/* /etc/asterisk/
 
-ADD ./entry.sh /
-
-ENTRYPOINT /entry.sh
+ENTRYPOINT /usr/sbin/asterisk -f
