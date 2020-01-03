@@ -132,7 +132,7 @@
 struct discovery_config {
 	int enabled;
 	char id[256];
-	char eid[20];
+	char eid[18];
 	char name[256];
 	char host[256];
 	char discovery_ip[16];
