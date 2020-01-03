@@ -11,13 +11,14 @@ import uvicorn
 from fastapi import FastAPI
 import swagger_client
 from swagger_client import Configuration
+from swagger_client.rest import ApiException
 
 RECONNECT_RATE = 1
 
 logger = logging.getLogger(__name__)
 
 
-class Context:
+class Config:
 
     def __init__(self):
         self.host = os.environ.get('APP_HOST', '127.0.0.1')
@@ -66,6 +67,44 @@ class Context:
             self.consul_port = consul.get('port')
 
 
+class Context:
+
+    def __init__(self, asterisk_id, channel):
+        self.asterisk_id = asterisk_id
+        self.channel = channel
+        self._user_data = None
+
+    def __hash__(self):
+        return hash((self.asterisk_id, self.channel.id))
+
+    def __eq__(self, other):
+        return ((self.asterisk_id, self.channel.id) ==
+                (other.asterisk_id, other.channel.id))
+
+    def __ne__(self, other):
+        return not(self == other)
+
+    def get_user_data(self):
+        return self._user_data
+
+    def set_user_data(self, user_data):
+        self._user_data = user_data
+
+    def del_user_data(self):
+        self._user_data = None
+
+    user_data = property(get_user_data, set_user_data, del_user_data)
+
+    def __str__(self):
+        return "%s/%s" % (self.asterisk_id, self.channel.id)
+
+    def __repr__(self):
+        return "%s/%s" % (self.asterisk_id, self.channel.id)
+
+    @property
+    def server_id(self):
+        return self.asterisk_id
+
 class Channel:
 
     def __init__(self, obj):
@@ -98,18 +137,20 @@ class Consumer:
 
 class Application:
 
-    def __init__(self, context, id, name, register=False):
-        self.context = context
+    def __init__(self, config, id, name, register=False):
+        self.config = config
         self.id = id
         self.name = name
         self.register = register
 
         self.fastapi = FastAPI()
 
+        self.contextes = dict()
+
         configuration = Configuration()
-        configuration.host = "%s/ari" % context.api_endpoint
-        configuration.username = context.api_username
-        configuration.password = context.api_password
+        configuration.host = "%s/ari" % config.api_endpoint
+        configuration.username = config.api_username
+        configuration.password = config.api_password
 
         self.api_client = swagger_client.ApiClient(configuration)
 
@@ -154,7 +195,7 @@ class Application:
             self.fastapi.get("/status")(self.status)
 
             config = uvicorn.Config(self.fastapi,
-                                    host="0.0.0.0", port=self.context.port)
+                                    host="0.0.0.0", port=self.config.port)
 
             server = uvicorn.Server(config)
 
@@ -167,13 +208,13 @@ class Application:
 
     async def connect_and_consume(self, queue):
         connection = await asynqp.connect(
-            self.context.amqp_host, self.context.amqp_port,
-            username=self.context.amqp_username,
-            password=self.context.amqp_password)
+            self.config.amqp_host, self.config.amqp_port,
+            username=self.config.amqp_username,
+            password=self.config.amqp_password)
         try:
             channel = await connection.open_channel()
             exchange = await channel.declare_exchange(
-                self.context.amqp_exchange, 'topic')
+                self.config.amqp_exchange, 'topic')
 
             amqp_queue = await channel.declare_queue('apps')
             await amqp_queue.bind(exchange, '#')
@@ -212,9 +253,9 @@ class Application:
     async def process_msgs(self, queue):
 
         type_state_cb = {
-            'StasisStart/Ring': self.onStart,
-            'ChannelStateChange/Up': self.onUp,
-            'StasisEnd/Up': self.onEnd
+            'StasisStart/Ring': self.on_start,
+            'ChannelStateChange/Up': self.on_up,
+            'StasisEnd/Up': self.on_end
         }
 
         try:
@@ -237,9 +278,17 @@ class Application:
                 channel = Channel(obj.get('channel', {}))
                 key = "%s/%s" % (typ, channel.state)
 
+                context = Context(asterisk_id, channel)
+                context = self.contextes.get(context, context)
+
+                if typ == "StasisStart":
+                    self.contextes[context] = context
+                elif typ == "StasisEnd":
+                    self.contextes.pop(context)
+
                 callback = type_state_cb.get(key)
                 if callback:
-                    await callback(asterisk_id, channel)
+                    await callback(context)
 
                 msg.ack()
         except asyncio.CancelledError:
@@ -249,8 +298,8 @@ class Application:
         app_registered = False
         try:
             c = consul.aio.Consul(
-                host=self.context.consul_host,
-                port=self.context.consul_port, loop=loop)
+                host=self.config.consul_host,
+                port=self.config.consul_port, loop=loop)
 
             revision = 1
             while True:
@@ -271,14 +320,14 @@ class Application:
 
                     response = await c.agent.service.register(
                         service_name, service_id=service_id,
-                        address=self.context.host, port=self.context.port,
+                        address=self.config.host, port=self.config.port,
                     )
                     if response is not True:
                         raise Exception("error",
                                         "registering service %s" % self.name)
 
                     status_url = "http://%s:%d/status" % (
-                        self.context.host, self.context.port)
+                        self.config.host, self.config.port)
                     response = await c.agent.check.register(
                         self.name, consul.Check.http(status_url, '5s'),
                         service_id=service_id)
@@ -300,8 +349,8 @@ class Application:
     async def register_all_ari(self, loop):
         try:
             c = consul.aio.Consul(
-                host=self.context.consul_host,
-                port=self.context.consul_port, loop=loop)
+                host=self.config.consul_host,
+                port=self.config.consul_port, loop=loop)
 
             while True:
                 eids = []
@@ -344,27 +393,42 @@ class Application:
 
             await asyncio.sleep(5)
 
-    async def answer(self, asterisk_id, channel):
-        logger.info("Answering call on channel : %s" % channel.id)
+    async def answer(self, context):
+        logger.info("Answering call on channel : %s" % context)
 
         try:
             channels_api = swagger_client.ChannelsApi(self.api_client)
             await channels_api.channels_channel_id_answer_post(
-                channel.id, x_asterisk_id=asterisk_id)
+                context.channel.id, x_asterisk_id=context.asterisk_id)
 
-            logger.info("Answered channel %s successful" % channel.id)
+            logger.info("Answered channel %s successful" % context)
         except Exception as e:
             logger.error("Error while answering channel %s : %s" % (
-                channel.id, e))
+                context, e))
+
+    async def play_media(self, context, uri):
+        if context not in self.contextes:
+            return
+
+        try:
+            channels_api = swagger_client.ChannelsApi(self.api_client)
+            await channels_api.channels_channel_id_play_post(
+                context.channel.id, [uri], x_asterisk_id=context.asterisk_id)
+
+            logger.info("Play something on channel %s" % context)
+        except ApiException as e:
+            logger.error("Error while playing something %s : %s" %
+                         (context, e))
+            return
 
     def run(self):
         pass
 
-    async def onStart(self, asterisk_id, channel):
+    async def on_start(self, context):
         pass
 
-    async def onEnd(self, asterisk_id, channel):
+    async def on_end(self, context):
         pass
 
-    async def onUp(self, asterisk_id, channel):
+    async def on_up(self, context):
         pass

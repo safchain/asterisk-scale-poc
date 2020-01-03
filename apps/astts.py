@@ -11,8 +11,9 @@ import os.path
 import urllib.parse
 import swagger_client
 from swagger_client.rest import ApiException
+import names
 
-from app import Application, Context
+from app import Application, Config
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +23,17 @@ APP_NAME = "astts"
 
 class AsttsApplication(Application):
 
-    def __init__(self, context, id, name, register=False,
+    def __init__(self, config, id, name, register=False,
                  data_dir='/tmp/astts'):
-        super().__init__(context, id, name, register=register)
+        super().__init__(config, id, name, register=register)
 
         self.data_dir = data_dir
 
         self.tts_tasks = dict()
 
         self.fastapi.get("/say")(self.say)
+
+        self.nicknames = dict()
 
     async def say(self, text=""):
         text = text.rstrip('.wav')
@@ -62,51 +65,50 @@ class AsttsApplication(Application):
 
         return Response(content=data, media_type="audio/wav")
 
-    async def onStart(self, asterisk_id, channel):
+    async def on_start(self, context):
         logger.info(
-            "Starting application on channel %s:%s" %
-            (asterisk_id, channel.id))
-        await self.answer(asterisk_id, channel)
+            "Starting application on channel %s" % context)
 
-    async def onEnd(self, asterisk_id, channel):
+        nickname = self.nicknames.get(context.server_id)
+
+        # generate nickname
+        if not nickname:
+            while True:
+                nickname = names.get_first_name()
+                if nickname not in self.nicknames.values():
+                    self.nicknames[context.server_id] = nickname
+                    break
+
+        context.user_data = nickname
+
+        await self.answer(context)
+
+    async def on_end(self, context):
         logger.info(
-            "End of application on channel %s:%s" % (asterisk_id, channel.id))
+            "End of application on channel %s" % context)
 
-        task = self.tts_tasks[channel.id]
+        task = self.tts_tasks.get(context)
         if task:
             task.cancel()
-            self.tts_tasks.pop(channel.id)
+            self.tts_tasks.pop(context)
 
-    async def onUp(self, asterisk_id, channel):
+    async def on_up(self, context):
         task = asyncio.create_task(
-            self.say_asterisk_id(asterisk_id, channel))
-        self.tts_tasks[channel.id] = task
+            self.say_asterisk_id(context))
+        self.tts_tasks[context] = task
 
-    async def say_asterisk_id(self, asterisk_id, channel):
+    async def say_asterisk_id(self, context):
         while True:
-            logger.info(
-                "Going to say something on channel %s:%s" %
-                (asterisk_id, channel.id))
+            logger.info("Going to say something on channel %s" % context)
 
-            sub_id = asterisk_id.split(":")[-1]
+            nickname = context.user_data
+            text = "Your are connected to Asterisk called %s" % nickname
 
-            text = "Your are connected to Asterisk number %s" % sub_id
-
-            endpoint = "http://%s:%d" % (self.context.host, self.context.port)
+            endpoint = "http://%s:%d" % (self.config.host, self.config.port)
             uri = "sound:%s/say?text=%s.wav" % (endpoint,
                                                 urllib.parse.quote(text))
 
-            try:
-                channels_api = swagger_client.ChannelsApi(self.api_client)
-                await channels_api.channels_channel_id_play_post(
-                    channel.id, [uri], x_asterisk_id=asterisk_id)
-
-                logger.info("Said something on channel %s:%s" %
-                             (asterisk_id, channel.id))
-            except ApiException as e:
-                logger.error("Error while saiying something %s : %s" % (
-                    channel.id, e))
-                return
+            await self.play_media(context, uri)
 
             await asyncio.sleep(5)
 
@@ -132,17 +134,17 @@ def main():
                         help="application data directory")
     args = parser.parse_args()
 
-    context = Context()
+    config = Config()
 
     if args.conf:
-        context.from_conf(args.conf)
+        config.from_conf(args.conf)
 
     if args.host:
-        context.host = args.host
+        config.host = args.host
     if args.port:
-        context.port = args.port
+        config.port = args.port
 
-    app = AsttsApplication(context, args.id, APP_NAME,
+    app = AsttsApplication(config, args.id, APP_NAME,
                            data_dir=args.data_dir, register=args.register)
     app.launch()
 

@@ -7,3 +7,5 @@ gTTS
 pyyaml
 python-consul
 -e ./ari
+
+names
