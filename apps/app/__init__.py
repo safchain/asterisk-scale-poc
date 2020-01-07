@@ -13,6 +13,10 @@ import swagger_client
 from swagger_client import Configuration
 from swagger_client.rest import ApiException
 
+from app.bridge import BridgeMixin
+from app.channel import ChannelMixin
+from app.media import MediaMixin
+
 RECONNECT_RATE = 1
 
 logger = logging.getLogger(__name__)
@@ -105,6 +109,7 @@ class Context:
     def server_id(self):
         return self.asterisk_id
 
+
 class Channel:
 
     def __init__(self, obj):
@@ -122,6 +127,10 @@ class Channel:
     def state(self):
         return self.obj.get('state')
 
+    @property
+    def raw(self):
+        return self.obj
+
 
 class Consumer:
 
@@ -135,7 +144,7 @@ class Consumer:
         logger.error("Connection lost while consuming queue : %s" % exc)
 
 
-class Application:
+class Application(BridgeMixin, ChannelMixin, MediaMixin):
 
     def __init__(self, config, id, name, register=False):
         self.config = config
@@ -270,21 +279,21 @@ class Application:
 
                 asterisk_id = obj.get('asterisk_id', '')
 
-                typ = obj.get('type', '')
+                type = obj.get('type', '')
                 app = obj.get('application', '')
                 if app != self.name:
                     continue
 
                 channel = Channel(obj.get('channel', {}))
-                key = "%s/%s" % (typ, channel.state)
+                key = "%s/%s" % (type, channel.state)
 
                 context = Context(asterisk_id, channel)
                 context = self.contextes.get(context, context)
 
-                if typ == "StasisStart":
+                if type == "StasisStart":
                     self.contextes[context] = context
-                elif typ == "StasisEnd":
-                    self.contextes.pop(context)
+                elif type == "StasisEnd":
+                    self.contextes.pop(context, None)
 
                 callback = type_state_cb.get(key)
                 if callback:
@@ -353,8 +362,6 @@ class Application:
                 port=self.config.consul_port, loop=loop)
 
             while True:
-                eids = []
-
                 (_, nodes) = await c.health.service("asterisk")
                 for node in nodes:
                     service = node.get("Service", {})
@@ -362,10 +369,7 @@ class Application:
                     eid = meta.get("eid")
 
                     if eid:
-                        eids.append(eid)
-
-                for eid in eids:
-                    await self.register_ari(eid)
+                        await self.register_ari(eid)
 
                 await asyncio.sleep(5)
         except asyncio.CancelledError:
@@ -392,34 +396,6 @@ class Application:
                     self.name, e))
 
             await asyncio.sleep(5)
-
-    async def answer(self, context):
-        logger.info("Answering call on channel : %s" % context)
-
-        try:
-            channels_api = swagger_client.ChannelsApi(self.api_client)
-            await channels_api.channels_channel_id_answer_post(
-                context.channel.id, x_asterisk_id=context.asterisk_id)
-
-            logger.info("Answered channel %s successful" % context)
-        except Exception as e:
-            logger.error("Error while answering channel %s : %s" % (
-                context, e))
-
-    async def play_media(self, context, uri):
-        if context not in self.contextes:
-            return
-
-        try:
-            channels_api = swagger_client.ChannelsApi(self.api_client)
-            await channels_api.channels_channel_id_play_post(
-                context.channel.id, [uri], x_asterisk_id=context.asterisk_id)
-
-            logger.info("Play something on channel %s" % context)
-        except ApiException as e:
-            logger.error("Error while playing something %s : %s" %
-                         (context, e))
-            return
 
     def run(self):
         pass

@@ -1,0 +1,18 @@
+#address: 127.0.0.1
+#port: 8000
+
+api:
+#  endpoint: http://127.0.0.1:8888
+#  username: wazo
+#  password: wazo
+
+amqp:
+#  host: 127.0.0.1
+#  port: 5276
+#  username: guest
+#  password: guest
+#  exchange: wazo
+  
+consul:
+#  host: 127.0.0.1
+#  port: 8500

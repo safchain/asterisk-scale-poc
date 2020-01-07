@@ -5,6 +5,7 @@ services:
     build: ./asterisk
     ports:
       - 8890-8899:8888/tcp
+      - 6060-6069:5060/udp
     links:
       - consul
       - rabbitmq
@@ -45,22 +46,22 @@ services:
       - 5060:5060/udp
     expose:
       - 5060/udp
-  apps:
-    build: ./apps
-    links:
-      - consul
-      - api-gateway
-      - rabbitmq
-      - asterisk
-    expose:
-      - 8000/tcp
-    ports:
-      - 8000:8000/tcp
-    environment:
-      - API_ENDPOINT=http://api-gateway
-      - AMQP_HOST=rabbitmq
-      - CONSUL_HOST=consul
-      - APP_HOST=apps
+#  apps:
+#    build: ./apps
+#    links:
+#      - consul
+#      - api-gateway
+#      - rabbitmq
+#      - asterisk
+#    expose:
+#      - 8000/tcp
+#    ports:
+#      - 8000:8000/tcp
+#    environment:
+#      - API_ENDPOINT=http://api-gateway
+#      - AMQP_HOST=rabbitmq
+#      - CONSUL_HOST=consul
+#      - APP_HOST=apps
 
 networks:
     default:
