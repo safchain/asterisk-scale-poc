@@ -14,7 +14,7 @@ from swagger_client import Configuration
 from swagger_client.rest import ApiException
 
 from app.bridge import BridgeMixin
-from app.channel import ChannelMixin
+from app.channel import ChannelMixin, Channel
 from app.media import MediaMixin
 
 RECONNECT_RATE = 1
@@ -110,28 +110,6 @@ class Context:
         return self.asterisk_id
 
 
-class Channel:
-
-    def __init__(self, obj):
-        self.obj = obj
-
-    @property
-    def dialplan(self):
-        return self.obj.get('dialplan', {})
-
-    @property
-    def id(self):
-        return self.obj.get('id')
-
-    @property
-    def state(self):
-        return self.obj.get('state')
-
-    @property
-    def raw(self):
-        return self.obj
-
-
 class Consumer:
 
     def __init__(self, queue):
@@ -147,6 +125,8 @@ class Consumer:
 class Application(BridgeMixin, ChannelMixin, MediaMixin):
 
     def __init__(self, config, id, name, register=False):
+        super(Application, self).__init__(config, id, name, register)
+
         self.config = config
         self.id = id
         self.name = name

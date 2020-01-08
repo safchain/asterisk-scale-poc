@@ -16,7 +16,8 @@ from app import Application, Config
 logger = logging.getLogger(__name__)
 
 
-APP_NAME = "cross"
+APP_NAME = "conf"
+BRIDGE_ID = "conf"
 
 
 class BridgeApplication(Application):
@@ -24,19 +25,12 @@ class BridgeApplication(Application):
     def __init__(self, config, id, name, register=False):
         super().__init__(config, id, name, register=register)
 
-        self.master = None
-        self.dials = set()
-
     async def on_start(self, context):
         logger.info(
             "Starting application on channel %s" % context)
 
-        await self.get_or_create_bridge(context, "cross", "mixing")
+        await self.get_or_create_bridge(context, BRIDGE_ID, "mixing")
 
-        if not self.master:
-            self.master = context.asterisk_id
-
-        # answer to the call
         await self.answer(context)
 
     async def on_end(self, context):
@@ -44,13 +38,8 @@ class BridgeApplication(Application):
             "End of application on channel %s" % context)
 
     async def on_up(self, context):
-        await self.bridge_add_channel(context, 'cross')
+        await self.bridge_add_channel(context, BRIDGE_ID)
 
-        if context.asterisk_id != self.master:
-            if context.channel.id not in self.dials:
-                channel = await self.dial(context, self.master, "7001")
-                if channel:
-                    self.dials.add(channel.id)
 
 def main():
     parser = argparse.ArgumentParser()

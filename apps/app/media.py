@@ -6,6 +6,9 @@ logger = logging.getLogger(__name__)
 
 class MediaMixin:
 
+    def __init__(self, *args, **kwargs):
+        super(MediaMixin, self).__init__()
+
     async def play_media(self, context, uri):
         if context not in self.contextes:
             return
