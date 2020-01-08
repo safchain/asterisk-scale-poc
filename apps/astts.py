@@ -49,7 +49,7 @@ class AsttsApplication(Application):
 
         if not os.path.isfile(fullpath):
             with open(fullpath, "wb") as fp:
-                tts = gTTS(text, 'en')
+                tts = gTTS(text, lang='en')
                 tts.write_to_fp(fp)
 
         proc = await asyncio.create_subprocess_exec(
