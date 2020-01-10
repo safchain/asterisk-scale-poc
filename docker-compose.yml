@@ -5,11 +5,13 @@ services:
     build: ./asterisk
     ports:
       - 8890-8899:8888/tcp
+      - 6060-6069:5060/udp
     links:
       - consul
       - rabbitmq
     expose:
       - 8888/tcp
+      - 5060/udp
     volumes:
       - ./asterisk/dev:/usr/src/dev
   api-gateway:
@@ -24,10 +26,6 @@ services:
     image: consul
     ports:
       - 8500:8500/tcp
-  postgresql:
-    image: postgres
-    ports:
-      - 5432:5432/tcp
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -45,22 +43,44 @@ services:
       - 5060:5060/udp
     expose:
       - 5060/udp
-  apps:
-    build: ./apps
+  astts:
+    build: 
+      context: ./apps
+      dockerfile: ./astts/Dockerfile
     links:
       - consul
       - api-gateway
       - rabbitmq
       - asterisk
     expose:
-      - 8000/tcp
+      - 8001/tcp
     ports:
-      - 8000:8000/tcp
+      - 8001:8001/tcp
     environment:
       - API_ENDPOINT=http://api-gateway
       - AMQP_HOST=rabbitmq
       - CONSUL_HOST=consul
-      - APP_HOST=apps
+      - APP_HOST=astts
+      - APP_PORT=8001
+  conf:
+    build: 
+      context: ./apps
+      dockerfile: ./conf/Dockerfile
+    links:
+      - consul
+      - api-gateway
+      - rabbitmq
+      - asterisk
+    expose:
+      - 8002/tcp
+    ports:
+      - 8002:8002/tcp
+    environment:
+      - API_ENDPOINT=http://api-gateway
+      - AMQP_HOST=rabbitmq
+      - CONSUL_HOST=consul
+      - APP_HOST=conf
+      - APP_PORT=8002
 
 networks:
     default:

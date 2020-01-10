@@ -1,0 +1,6 @@
+gTTS==2.1.0
+gTTS-token==1.1.3
+names==0.3.0
+git+https://github.com/safchain/asyncio-ari-ast-id.git
+-e ../app_sdk
+

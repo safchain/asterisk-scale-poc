@@ -15,28 +15,28 @@ RUN apt-get -y install asterisk asterisk-dev librabbitmq-dev make gcc libcurl4-o
 RUN rm -rf /etc/asterisk/*
 
 # Install Asterisk consul module
-ADD asterisk-res-consul /usr/src/asterisk-res-consul
+RUN git clone --single-branch --branch scale https://github.com/lebauce/asterisk-res-consul /usr/src/asterisk-res-consul
 WORKDIR /usr/src/asterisk-res-consul
 RUN CFLAGS=-g make
 RUN make clean
 RUN make install
-RUN make samples
+#RUN make samples
 
 # Install Asterisk consul discovery module
-ADD asterisk-res-consul-discovery /usr/src/asterisk-res-consul-discovery
+RUN git clone --single-branch --branch scale https://github.com/lebauce/asterisk-res-consul-discovery /usr/src/asterisk-res-consul-discovery
 WORKDIR /usr/src/asterisk-res-consul-discovery
 RUN CFLAGS=-g make
 RUN make clean
 RUN make install
-RUN make samples
+#RUN make samples
 
 # Install Asterisk consul app module
-ADD asterisk-res-consul-stasis-app /usr/src/asterisk-res-consul-stasis-app
+RUN git clone --single-branch --branch scale https://github.com/lebauce/asterisk-res-consul-stasis-app /usr/src/asterisk-res-consul-stasis-app
 WORKDIR /usr/src/asterisk-res-consul-stasis-app
 RUN make clean
 RUN CFLAGS=-g make
 RUN make install
-RUN make samples
+#RUN make samples
 
 RUN git clone --single-branch --branch scale https://github.com/wazo-platform/wazo-res-amqp.git /usr/src/wazo-res-amqp
 WORKDIR /usr/src/wazo-res-amqp
@@ -53,3 +53,6 @@ RUN make install
 ADD etc/asterisk/* /etc/asterisk/
 
 ENTRYPOINT /usr/sbin/asterisk -f
+
+#ADD ./entry.sh /
+#ENTRYPOINT /entry.sh
