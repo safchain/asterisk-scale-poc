@@ -1,0 +1,133 @@
+# This file should not be modified as it may get changed by the maintainer.
+# Add extra configuration files in the extra_config_files directory to override
+# the content from this file
+
+# Extra configuration directory where the config files overriding this file
+# should be.
+extra_config_files: 
+
+log_filename: /var/log/wazo-auth.log
+pid_filename: /run/wazo-auth/wazo-auth.pid
+foreground: False
+debug: False
+
+# The lifetime of tokens in seconds
+default_token_lifetime: 7200
+
+# Templates
+email_confirmation_expiration: 172800
+email_confirmation_template: '/var/lib/wazo-auth/templates/email_confirmation.jinja'
+email_confirmation_subject_template: '/var/lib/wazo-auth/templates/email_confirmation_subject.jinja'
+email_confirmation_from_name: 'wazo-auth'
+email_confirmation_from_address: 'noreply@wazo.community'
+email_confirmation_get_reponse_body_template': '/var/lib/wazo-auth/templates/email_confirmation_get_body.jinja'
+email_confirmation_get_mimetype': 'text/html'
+
+password_reset_expiration: 172800
+password_reset_from_name: 'wazo-auth'
+password_reset_from_address: 'noreply@wazo.community'
+password_reset_email_template: '/var/lib/wazo-auth/templates/password_reset_email.jinja'
+password_reset_email_subject_template: '/var/lib/wazo-auth/templates/password_reset_email_subject.jinja'
+
+# REST API server
+rest_api:
+
+  # The maximum number of threads in the webserver thread pool
+  max_threads: 25
+
+  listen: 0.0.0.0
+  port: 9497
+  certificate: 
+  private_key: 
+
+    #CORS configuration. See Flask-CORS documentation for other values.
+  cors:
+    enabled: True
+
+    #Allow JSON preflight requests
+    allow_headers: [Content-Type, Authorization, X-Auth-Token, Wazo-Tenant, Wazo-Session-Type]
+
+enabled_http_plugins:
+  user_registration: false
+
+enabled_backend_plugins:
+  ldap_user: false
+
+enabled_external_auth_plugins:
+  google: true
+  microsoft: true
+  mobile: true
+
+microsoft:
+  authorization_base_url: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+  redirect_uri: 'https://oauth.wazo.io/microsoft/authorize'
+  scope: [
+        'offline_access',
+        'Contacts.Read'
+    ]
+  token_url: 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+  websocket_host: 'wss://oauth.wazo.io'
+
+google:
+  authorization_base_url: 'https://accounts.google.com/o/oauth2/v2/auth'
+  redirect_uri: 'https://oauth.wazo.io/google/authorize'
+  scope: [
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/contacts'
+    ]
+  token_url: 'https://www.googleapis.com/oauth2/v4/token'
+  websocket_host: 'wss://oauth.wazo.io'
+
+amqp:
+  uri: amqp://guest:guest@asterisk:5672/
+  exchange_name: wazo
+  exchange_type: topic
+
+# Local SMTP configuration
+smtp:
+  hostname: localhost
+  port: 25
+
+consul:
+  scheme: http
+  host: consul
+  port: 8500
+  verify: 
+  token: 'the_one_ring'
+
+backend_policies:
+  ldap_user: wazo_default_user_policy
+  wazo_user: wazo_default_user_policy
+
+# Confd connection information
+confd:
+  host: 'localhost'
+  https: true
+  port: 9486
+  verify_certificate: 
+
+# Database connection informations.
+db_uri: postgresql://admin:secret@postgresql/wazo?application_name=wazo-auth
+confd_db_uri: postgresql://admin:secret@postgresql/wazo?application_name=wazo-auth
+
+# Service discovery configuration. all time intervals are in seconds
+service_discovery:
+  # to indicate wether of not to use service discovery, should only be disabled
+  # for testing purposes
+  enabled: true
+  # the address that will be received by other services using service discovery.
+  # use "advertise_address: auto" to enable ip address detection based on
+  # advertise_address_interface
+  advertise_address: auto
+  # if advertise_address is "auto" this interface will be used to find the ip
+  # address to advertise. ignored otherwise
+  advertise_address_interface: eth0
+  advertise_port: 9497
+  # the number of seconds that consul will wait between 2 ttl messages to mark
+  # this service as up
+  ttl_interval: 30
+  # the time interval before the service sends a new ttl message to consul
+  refresh_interval: 27
+  # the time interval to detect that the service is running when starting
+  retry_interval: 2
+  extra_tags: []

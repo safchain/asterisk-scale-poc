@@ -2,6 +2,7 @@ from hashicorp/consul-template:alpine
 
 ADD ./config /config
 
+USER root
 RUN apk update
 RUN apk add nginx
 RUN mkdir /run/nginx

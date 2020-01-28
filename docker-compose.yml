@@ -81,6 +81,33 @@ services:
       - CONSUL_HOST=consul
       - APP_HOST=conf
       - APP_PORT=8002
+  postgresql:
+    image: postgres
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=wazo
+    expose:
+       - 5432/tcp
+  wazo-auth:
+    build: ./wazo-auth
+    ports:
+      - 9497:9497/tcp
+    volumes:
+      - ./wazo-auth/etc:/etc/wazo-auth
+    links:
+      - postgresql
+      - consul
+      - asterisk
+    environment:
+      - XIVO_UUID=123
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=wazo
+      - USERNAME=admin
+      - PASSWORD=secret
+      - UUID=acea422c-84cf-4dd5-a244-6108d3a7e6e4
+  
 
 networks:
     default:
