@@ -107,7 +107,6 @@ services:
       - USERNAME=admin
       - PASSWORD=secret
       - UUID=acea422c-84cf-4dd5-a244-6108d3a7e6e4
-  
 
 networks:
     default:

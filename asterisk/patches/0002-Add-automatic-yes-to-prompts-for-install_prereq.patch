@@ -1,0 +1,25 @@
+From 011f86cd2229adbd1fe7288536e29215fd27fe7d Mon Sep 17 00:00:00 2001
+From: Sylvain Afchain <safchain@gmail.com>
+Date: Wed, 29 Jan 2020 10:47:36 +0100
+Subject: [PATCH] Add automatic yes to prompts for install_prereq
+
+---
+ contrib/scripts/install_prereq | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/contrib/scripts/install_prereq b/contrib/scripts/install_prereq
+index c3217033db..9215132044 100755
+--- a/contrib/scripts/install_prereq
++++ b/contrib/scripts/install_prereq
+@@ -261,7 +261,7 @@ check_installed_zypper() {
+ 
+ handle_debian() {
+ 	if ! [ -x "$(command -v aptitude)" ]; then
+-		apt-get install aptitude
++		apt-get install -y aptitude
+ 	fi
+ 	extra_packs=`check_installed_debs $PACKAGES_DEBIAN`
+ 	$testcmd aptitude update
+-- 
+2.24.1
+

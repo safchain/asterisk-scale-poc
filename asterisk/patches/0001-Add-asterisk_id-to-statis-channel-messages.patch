@@ -1,0 +1,33 @@
+From 1b058085ed875e5755c93791e003dc741672918c Mon Sep 17 00:00:00 2001
+From: Sylvain Afchain <safchain@gmail.com>
+Date: Wed, 29 Jan 2020 10:10:44 +0100
+Subject: [PATCH 1/2] Add asterisk_id to statis channel messages
+
+---
+ main/stasis_channels.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/main/stasis_channels.c b/main/stasis_channels.c
+index 12c8f4487c..a354895985 100644
+--- a/main/stasis_channels.c
++++ b/main/stasis_channels.c
+@@ -1345,6 +1345,7 @@ static struct ast_json *channel_blob_to_json(
+ 	struct ast_json *blob = channel_blob->blob;
+ 	struct ast_channel_snapshot *snapshot = channel_blob->snapshot;
+ 	const struct timeval *tv = stasis_message_timestamp(message);
++	char eid[128];
+ 	int res = 0;
+ 
+ 	if (blob == NULL || ast_json_is_null(blob)) {
+@@ -1357,6 +1358,8 @@ static struct ast_json *channel_blob_to_json(
+ 		return NULL;
+ 	}
+ 
++	res |= ast_json_object_set(to_json, "asterisk_id", ast_json_string_create(
++		ast_eid_to_str(eid, sizeof(eid), &ast_eid_default)));
+ 	res |= ast_json_object_set(to_json, "type", ast_json_string_create(type));
+ 	res |= ast_json_object_set(to_json, "timestamp",
+ 		ast_json_timeval(*tv, NULL));
+-- 
+2.24.1
+
