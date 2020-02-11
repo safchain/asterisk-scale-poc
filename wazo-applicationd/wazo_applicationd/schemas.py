@@ -60,9 +60,7 @@ class ApplicationCallSchema(BaseSchema):
     on_hold = fields.Boolean()
     is_caller = fields.Boolean()
     dialed_extension = fields.String()
-    variables = StrictDict(
-        key_field=fields.String(), value_field=fields.String()
-    )
+    variables = StrictDict(key_field=fields.String(), value_field=fields.String())
     node_uuid = fields.String()
     moh_uuid = fields.String()
     muted = fields.Boolean()

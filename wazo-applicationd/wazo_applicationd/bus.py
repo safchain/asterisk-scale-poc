@@ -8,6 +8,9 @@ from asyncio import Queue
 import asynqp  # type: ignore
 from asynqp import IncomingMessage
 from asynqp import Connection
+from asynqp import channel
+from asynqp import Exchange
+from asynqp import Message
 import logging
 import json
 
@@ -21,14 +24,14 @@ from openapi_client import ApiClient  # type: ignore
 from .config import Config
 from .context import Context
 from .application import Application
+from .events import BaseEvent
 
-
-SERVICE_ID = "applicationd"
+SERVICE_ID = "wazo-applicationd"
 
 logger = logging.getLogger(__name__)
 
 
-class Event:
+class StasisEvent:
 
     asterisk_id: str
     application_name: str
@@ -55,55 +58,53 @@ class Consumer:
 class Bus:
 
     config: Config
-    event_cbs: Dict[str, Callable[[Context, Event, Any], Awaitable[None]]]
+    StasisEvent_cbs: Dict[str, Callable[[Context, StasisEvent, Any], Awaitable[None]]]
+    out_queue: Queue[BaseEvent]
 
     def __init__(self, config: Config, reconnect_rate: int = 1) -> None:
         self.config = config
 
-        self.event_cbs = dict()
+        self.StasisEvent_cbs = dict()
+        self.out_queue = asyncio.Queue()
 
     async def run(self) -> None:
-        logger.info("start AMQP Bus")
+        logger.info("Start AMQP Bus")
 
-        loop = asyncio.get_event_loop()
-        queue: Queue[IncomingMessage] = asyncio.Queue()
+        in_queue: Queue[IncomingMessage] = asyncio.Queue()
+        self.out_queue = asyncio.Queue()
 
         await asyncio.gather(
-            self.reconnector(queue), self._process_msgs(queue)
+            self.reconnector(in_queue, self.out_queue), self.consume_msgs(in_queue)
         )
 
-    async def connect_and_consume(
-        self, queue: Queue[IncomingMessage]
-    ) -> Connection:
-        connection = await asynqp.connect(
-            self.config.amqp_host,
-            self.config.amqp_port,
-            username=self.config.amqp_username,
-            password=self.config.amqp_password,
+    async def consume(
+        self, connection: Connection, queue: Queue[IncomingMessage]
+    ) -> None:
+        channel = await connection.open_channel()
+        exchange = await channel.declare_exchange(
+            self.config.get("amqp_exchange"), "topic"
         )
 
-        try:
-            channel = await connection.open_channel()
-            exchange = await channel.declare_exchange(
-                self.config.amqp_exchange, "topic"
-            )
+        amqp_queue = await channel.declare_queue(SERVICE_ID)
 
-            amqp_queue = await channel.declare_queue(SERVICE_ID)
+        # NOTE(safchain) need to find a better binding thing
+        # so that not all application receive all messages
+        await amqp_queue.bind(exchange, self.config.get("amqp_routing_key"))
 
-            # NOTE(safchain) need to find a better binding thing
-            # so that not all application receive all messages
-            await amqp_queue.bind(exchange, "#")
+        consumer = Consumer(queue)
+        await amqp_queue.consume(consumer)
 
-            consumer = Consumer(queue)
-            await amqp_queue.consume(consumer)
+    async def produce(self, connection: Connection, queue: Queue[BaseEvent]) -> None:
+        channel = await connection.open_channel()
 
-        except asynqp.AMQPError as err:
-            logger.error("Could not consume on queue {}".format(err))
-            await connection.close()
-            return None
-        return connection
+        # NOTE(safchain) exchange name part of the config file
+        exchange = await channel.declare_exchange(SERVICE_ID, "topic")
 
-    async def reconnector(self, queue: Queue[IncomingMessage]) -> None:
+        await self.produce_msgs(connection, exchange, queue)
+
+    async def reconnector(
+        self, in_queue: Queue[IncomingMessage], out_queue: Queue[BaseEvent]
+    ) -> None:
         loop = asyncio.get_event_loop()
         try:
             connection = None
@@ -111,17 +112,33 @@ class Bus:
                 if connection is None or connection.is_closed():
                     logger.info("Connecting to rabbitmq...")
                     try:
-                        connection = await self.connect_and_consume(queue)
+                        connection = await asynqp.connect(
+                            self.config.get("amqp_host"),
+                            self.config.get("amqp_port"),
+                            username=self.config.get("amqp_username"),
+                            password=self.config.get("amqp_password"),
+                        )
+
+                        asyncio.gather(
+                            self.consume(connection, in_queue),
+                            self.produce(connection, out_queue),
+                        )
+                    except asynqp.AMQPError as err:
+                        logger.error("Connection error {}".format(err))
+                        if connection is not None:
+                            await connection.close()
+                            connection = None
                     except (ConnectionError, OSError):
                         logger.error(
                             "Failed to connect to rabbitmq server. "
                             "Will retry in {} seconds".format(
-                                self.config.amqp_reconnection_rate
+                                self.config.get("amqp_reconnection_rate")
                             )
                         )
                         connection = None
+
                     if connection is None:
-                        await asyncio.sleep(self.config.amqp_reconnection_rate)
+                        await asyncio.sleep(self.config.get("amqp_reconnection_rate"))
                     else:
                         logger.info("Successfully connected and consuming")
 
@@ -130,7 +147,7 @@ class Bus:
             if connection is not None:
                 await connection.close()
 
-    async def _process_msgs(self, queue: Queue[IncomingMessage]) -> None:
+    async def consume_msgs(self, queue: Queue[IncomingMessage]) -> None:
         api = ApiClient()
 
         try:
@@ -141,9 +158,7 @@ class Bus:
                 try:
                     obj = json.loads(queue_msg.body)
                 except Exception as e:
-                    logger.error(
-                        "Error while decoding AMQP message: {}".format(e)
-                    )
+                    logger.error("Error while decoding AMQP message: {}".format(e))
                     continue
 
                 type = obj.get("type")
@@ -152,35 +167,52 @@ class Bus:
 
                 asterisk_id = obj.get("asterisk_id")
                 if not asterisk_id:
-                    logger.error(
-                        "Error message without asterisk id: {}".format(obj)
-                    )
+                    logger.error("Error message without asterisk id: {}".format(obj))
                     continue
 
                 application_name = obj.get("application")
+
+                # fall back
+                if not application_name:
+                    channel = obj.get("channel", {})
+                    dialplan = channel.get("dialplan", {})
+                    application_name = dialplan.get("app_data")
+
                 if not Application.is_valid(application_name):
-                    logger.error(
-                        "Error not a valid application: {}".format(
-                            application_name
-                        )
-                    )
+                    logger.error("Error not a valid application: {}".format(obj))
                     continue
 
                 msg = api.deserialize_obj(obj, "Message")
-                cb = self.event_cbs.get(type)
+                cb = self.StasisEvent_cbs.get(type)
                 if cb:
                     context = Context(asterisk_id)
-                    event = Event(asterisk_id, application_name)
+                    event = StasisEvent(asterisk_id, application_name)
 
                     await cb(context, event, msg)
 
         except asyncio.CancelledError:
             pass
 
-    def publish(self) -> None:
-        pass
+    def event_to_msg(self, event: BaseEvent) -> Message:
+        return Message(event.body, headers=event.metadata)
+
+    async def produce_msgs(
+        self, connection: Connection, exchange: Exchange, queue: Queue[BaseEvent]
+    ) -> None:
+        try:
+            while True:
+                event = await queue.get()
+                msg = self.event_to_msg(event)
+                logger.debug('Publishing event "%s": %s', event.name, msg)
+                exchange.publish(msg, event.routing_key, mandatory=False)
+
+        except asyncio.CancelledError:
+            pass
+
+    def publish(self, event: BaseEvent) -> None:
+        self.out_queue.put_nowait(event)
 
     def on_event(
-        self, type: str, cb: Callable[[Context, Event, Any], Awaitable[None]]
+        self, type: str, cb: Callable[[Context, StasisEvent, Any], Awaitable[None]]
     ) -> None:
-        self.event_cbs[type] = cb
+        self.StasisEvent_cbs[type] = cb

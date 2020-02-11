@@ -10,7 +10,7 @@ from typing import Any
 
 from .bus import Bus
 from .context import Context
-from .bus import Event
+from .bus import StasisEvent
 from .service import Service
 
 from openapi_client.models import StasisStart  # type: ignore
@@ -32,18 +32,8 @@ class Stasis:
         self.bus.on_event("StasisStart", self.on_stasis_start)
 
     async def on_stasis_start(
-        self, context: Context, event: Event, stasis_start: StasisStart
+        self, context: Context, event: StasisEvent, stasis_start: StasisStart
     ) -> None:
-        print("---------")
-        print(event.asterisk_id)
-        print(stasis_start)
-        print("---------")
-
-        # NOTE(safchain) filter out non wazo application
-        # application_uuid = AppNameHelper.to_uuid(event.get('application'))
-        # if not application_uuid:
-        #    return
-
         if not stasis_start.args:
             return await self.start_user_outgoing(
                 context, event.application_name, stasis_start
@@ -72,16 +62,11 @@ class Stasis:
         """
 
     async def start_user_outgoing(
-        self,
-        context: Context,
-        application_name: str,
-        stasis_start: StasisStart,
+        self, context: Context, application_name: str, stasis_start: StasisStart,
     ) -> None:
         logger.debug("New user outgoing call %s", stasis_start.channel.id)
 
-        application = await self.service.get_application(
-            context, application_name
-        )
+        application = await self.service.get_application(context, application_name)
         await self.service.start_user_outgoing_call(
             context, application, stasis_start.channel
         )

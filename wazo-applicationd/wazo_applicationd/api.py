@@ -30,14 +30,21 @@ class API:
         self.fastapi = FastAPI()
 
     async def run(self) -> None:
-        logger.info("start API")
+        logger.info("Start API")
 
         try:
             self.fastapi.get("/status")(self.status)
             self.fastapi.post("/applications/{name}")(self.applications_post)
 
+            log_level = logging.INFO
+            if self.config.get("debug"):
+                log_level = logging.DEBUG
+
             config = uvicorn.Config(
-                self.fastapi, host="0.0.0.0", port=self.config.port
+                self.fastapi,
+                host="0.0.0.0",
+                port=self.config.get("port"),
+                log_level=log_level,
             )
 
             server = uvicorn.Server(config)
@@ -50,6 +57,4 @@ class API:
         return {"state": "ok"}
 
     async def applications_post(self, name: str) -> Any:
-        print(name)
-
         await self.discovery.register_application(name)

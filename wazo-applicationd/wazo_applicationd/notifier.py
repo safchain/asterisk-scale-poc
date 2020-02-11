@@ -10,19 +10,23 @@ from openapi_client.models.application import Application  # type: ignore
 from .bus import Bus
 from .application import ApplicationCall
 from .events import UserOutgoingCallCreated
+from .context import Context
+from .config import Config
 
 logger = logging.getLogger(__name__)
 
 
 class Notifier:
 
+    config: Config
     bus: Bus
 
-    def __init__(self, bus: Bus) -> None:
+    def __init__(self, config: Config, bus: Bus) -> None:
         self.bus = bus
+        self.config = config
 
     async def user_outgoing_call_created(
-        self, application: Application, call: ApplicationCall
+        self, context: Context, application: Application, call: ApplicationCall
     ) -> None:
         logger.debug(
             "Application {}: User outgoing call {} created".format(
@@ -30,8 +34,5 @@ class Notifier:
             )
         )
 
-        event = UserOutgoingCallCreated(application, call)
-        print("#######")
-        print(event.body)
-        print("#######")
-        # self._bus.publish(event)
+        event = UserOutgoingCallCreated(self.config, context, application, call)
+        self.bus.publish(event)

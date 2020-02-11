@@ -37,9 +37,7 @@ class ApplicationCall:
     # snoops: Dict
 
     @classmethod
-    async def from_channel(
-        self, context: Context, channel: Channel
-    ) -> ApplicationCall:
+    async def from_channel(self, context: Context, channel: Channel) -> ApplicationCall:
         call = ApplicationCall()
 
         call.id = channel.id

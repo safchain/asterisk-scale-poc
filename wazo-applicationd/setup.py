@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="app sdk",
+    name="wazo-applicationd",
     version="1.0.0",
     description="App SDK",
-    author_email="",
-    url="",
-    keywords=[],
+    author="Wazo Authors",
+    author_email="dev@wazo.community",
+    url="http://www.wazo-platform.org",
     install_requires=[
         "async-timeout==3.0.1",
         "asynqp==0.6",
@@ -26,7 +26,7 @@ setup(
         "pydantic==1.3",
         "python-consul==1.1.0",
         "python-dateutil==2.8.1",
-        "PyYAML==5.3",
+        "PyYAML==5.1.2",
         "requests==2.22.0",
         "six==1.13.0",
         "soupsieve==1.9.5",
@@ -37,9 +37,15 @@ setup(
         "vine==1.3.0",
         "websockets==8.1",
         "yarl==1.4.2",
-        "zipp==0.6.0"
+        "zipp==0.6.0",
+        "gila==0.4.0"
     ],
     packages=find_packages(),
     include_package_data=True,
-    long_description=""
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "Operating System :: OS Independent",
+    ],
+    entry_points={'console_scripts': ['wazo-applicationd=wazo_applicationd.main:main']}
 )

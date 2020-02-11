@@ -6,64 +6,39 @@ from __future__ import annotations
 import os
 import yaml
 
+from gila import Gila  # type: ignore
 
-class Config:
 
-    host: str
-    port: int
-
-    api_endpoint: str
-    api_username: str
-    api_password: str
-
-    amqp_host: str
-    amqp_port: int
-    amqp_username: str
-    amqp_password: str
-    amqp_exchange: str
-    amqp_reconnection_rate: int
-
-    consul_host: str
-    consul_port: int
-
+class Config(Gila):  # type: ignore
     def __init__(self) -> None:
-        self.host = os.environ.get('APP_HOST', '127.0.0.1')
-        self.port = int(os.environ.get('APP_PORT', '8000'))
+        super().__init__()
 
-        self.api_endpoint = os.environ.get(
-            'API_ENDPOINT', 'http://localhost:8088')
-        self.api_username = os.environ.get('API_USERNAME', 'wazo')
-        self.api_password = os.environ.get('API_PASSWORD', 'wazo')
+        self.set_env_prefix("WAZO")
+        self.automatic_env()
 
-        self.amqp_host = os.environ.get('AMQP_HOST', '127.0.0.1')
-        self.amqp_port = int(os.environ.get('AMQP_PORT', '5672'))
-        self.amqp_username = os.environ.get('AMQP_USERNAME', 'guest')
-        self.amqp_password = os.environ.get('AMQP_PASSWORD', 'guest')
-        self.amqp_exchange = os.environ.get('AMQP_EXCHANGE', 'wazo')
-        self.amqp_reconnection_rate = int(
-            os.environ.get('AMQP_RECONNECTION_RATE', '1'))
+        self.set_default("uuid", "1223456789")
 
-        self.consul_host = os.environ.get('CONSUL_HOST', '127.0.0.1')
-        self.consul_port = int(os.environ.get('CONSUL_PORT', '8500'))
+        self.set_default("host", "127.0.0.1")
+        self.set_default("port", 8000)
 
-    def from_file(self, file: str = "app.yml") -> None:
-        doc = {}
-        if os.path.isfile(file):
-            with open(file) as f:
-                doc = yaml.load(f, Loader=yaml.FullLoader)
+        self.set_default("api_endpoint", "http://localhost:8088")
+        self.set_default("api_username", "wazo")
+        self.set_default("api_password", "wazo")
 
-        self.host = doc.get('address', self.host)
-        self.port = doc.get('port', self.port)
+        self.set_default("amqp_host", "127.0.0.1")
+        self.set_default("amqp_port", 5672)
+        self.set_default("amqp_username", "guest")
+        self.set_default("amqp_password", "guest")
+        self.set_default("amqp_exchange", "wazo")
+        self.set_default("amqp_routing_key", "stasis.app.#")
+        self.set_default("amqp_reconnection_rate", 1)
 
-        amqp = doc.get('amqp')
-        if amqp:
-            self.amqp_host = amqp.get('host')
-            self.amqp_port = amqp.get('port')
-            self.amqp_username = amqp.get('username')
-            self.amqp_password = amqp.get('password')
-            self.amqp_exchange = amqp.get('exchange')
+        self.set_default("consul_host", "127.0.0.1")
+        self.set_default("consul_port", 8500)
 
-        consul = doc.get('consul')
-        if consul:
-            self.consul_host = consul.get('host')
-            self.consul_port = consul.get('port')
+        self.set_default("debug", True)
+
+    def load_file(self, filename: str) -> None:
+        self.set_config_file(filename)
+        self.read_in_config()
+

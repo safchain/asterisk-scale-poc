@@ -30,8 +30,8 @@ class Discovery:
         loop = asyncio.get_event_loop()
 
         self.consul = consul.aio.Consul(
-            host=self.config.consul_host,
-            port=self.config.consul_port,
+            host=self.config.get("consul_host"),
+            port=self.config.get("consul_port"),
             loop=loop,
         )
 
@@ -51,30 +51,24 @@ class Discovery:
             name = await queue.get()
 
             try:
-                logger.info(
-                    "Registering application {} in Consul".format(name)
-                )
+                logger.info("Registering application {} in Consul".format(name))
 
                 response = await self.consul.kv.put(
                     "applications/{}".format(name), name
                 )
                 if response is not True:
-                    raise Exception(
-                        "error", "registering application {}".format(name)
-                    )
+                    raise Exception("error", "registering application {}".format(name))
 
                 service_id = "apps/{}".format(name)
 
                 response = await self.consul.agent.service.register(
                     name,
                     service_id=service_id,
-                    address=self.config.host,
-                    port=self.config.port,
+                    address=self.config.get("host"),
+                    port=self.config.get("port"),
                 )
                 if response is not True:
-                    raise Exception(
-                        "error", "registering service {}".format(name)
-                    )
+                    raise Exception("error", "registering service {}".format(name))
             except asyncio.CancelledError:
                 return
             except Exception as e:
@@ -86,17 +80,15 @@ class Discovery:
                 response = await self.consul.agent.service.register(
                     SERVICE_ID,
                     service_id=SERVICE_ID,
-                    address=self.config.host,
-                    port=self.config.port,
+                    address=self.config.get("host"),
+                    port=self.config.get("port"),
                 )
                 if response is not True:
-                    raise Exception(
-                        "error", "registering service %s" % SERVICE_ID
-                    )
+                    raise Exception("error", "registering service %s" % SERVICE_ID)
 
                 status_url = "http://%s:%d/status" % (
-                    self.config.host,
-                    self.config.port,
+                    self.config.get("host"),
+                    self.config.get("port"),
                 )
                 response = await self.consul.agent.check.register(
                     SERVICE_ID,
@@ -104,13 +96,9 @@ class Discovery:
                     service_id=SERVICE_ID,
                 )
                 if response is not True:
-                    raise Exception(
-                        "error", "registering check %s" % SERVICE_ID
-                    )
+                    raise Exception("error", "registering check %s" % SERVICE_ID)
 
-                logger.info(
-                    "Service check %s registered in Consul" % SERVICE_ID
-                )
+                logger.info("Service check %s registered in Consul" % SERVICE_ID)
             except asyncio.CancelledError:
                 return
             except Exception as e:

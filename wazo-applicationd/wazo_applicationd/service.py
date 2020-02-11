@@ -40,9 +40,9 @@ class Service:
         self.notifier = notifier
 
         configuration = Configuration()
-        configuration.host = "%s/ari" % config.api_endpoint
-        configuration.username = config.api_username
-        configuration.password = config.api_password
+        configuration.host = "%s/ari" % config.get("api_endpoint")
+        configuration.username = config.get("api_username")
+        configuration.password = config.get("api_password")
 
         self.api_client = ApiClient(configuration)
 
@@ -55,12 +55,7 @@ class Service:
         )
 
     async def set_channel_var_sync(
-        self,
-        context: Context,
-        channel: Channel,
-        var: str,
-        value: str,
-        retry: int = 20,
+        self, context: Context, channel: Channel, var: str, value: str, retry: int = 20,
     ) -> None:
         api = ChannelsApi(self.api_client)
         try:
@@ -69,9 +64,7 @@ class Service:
             )
         except ApiException as e:
             logging.error(
-                "Unable to set variable to channel {} : {}".format(
-                    channel.id, e
-                )
+                "Unable to set variable to channel {} : {}".format(channel.id, e)
             )
             return
 
@@ -84,14 +77,12 @@ class Service:
                 if res.value == value:
                     return
             except Exception as e:
-                logger.error("failed to get variable {} : {}".format(var, e))
+                logger.debug("failed to get variable {} : {}".format(var, e))
             finally:
                 logger.debug("waiting for a setvar to complete")
                 await asyncio.sleep(0.1)
 
-        raise Exception(
-            "failed to set channel variable {}={}".format(var, value)
-        )
+        raise Exception("failed to set channel variable {}={}".format(var, value))
 
     async def start_user_outgoing_call(
         self, context: Context, application: Application, channel: Channel
@@ -100,4 +91,4 @@ class Service:
             context, channel, "WAZO_USER_OUTGOING_CALL", "true"
         )
         call = await ApplicationCall.from_channel(context, channel)
-        await self.notifier.user_outgoing_call_created(application, call)
+        await self.notifier.user_outgoing_call_created(context, application, call)

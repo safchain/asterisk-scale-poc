@@ -19,12 +19,11 @@ ADD patches/ /usr/src/asterisk/patches
 WORKDIR /usr/src/asterisk
 
 # apply patches
-RUN git apply ./patches/0001-Add-asterisk_id-to-statis-channel-messages.patch
-RUN git apply ./patches/0002-Add-automatic-yes-to-prompts-for-install_prereq.patch
+
 
 RUN DEBIAN_FRONTEND=noninteractive ./contrib/scripts/install_prereq install
 RUN ./configure
-RUN make -j 2
+RUN CFLAGS="-g -O0" make -j 2
 RUN make install
 RUN make install-headers
 
