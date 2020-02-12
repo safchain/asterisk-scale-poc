@@ -1,0 +1,6 @@
+requests
+websocket-client==0.53.0
+git+https://github.com/wazo-platform/wazo-auth-client
+git+https://github.com/wazo-platform/wazo-websocketd-client
+git+https://github.com/wazo-platform/wazo-lib-rest-client
+-e ../../wazo-applicationd-client
