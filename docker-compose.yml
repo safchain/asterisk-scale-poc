@@ -107,6 +107,15 @@ services:
       - USERNAME=admin
       - PASSWORD=secret
       - UUID=acea422c-84cf-4dd5-a244-6108d3a7e6e4
+  wazo-websocketd:
+    build: ./wazo-websocketd
+    ports:
+      - 9502:9502/tcp
+    volumes:
+      - ./wazo-websocketd/etc:/etc/wazo-websocketd
+    links:
+      - wazo-auth
+      - rabbitmq
 
 networks:
     default:

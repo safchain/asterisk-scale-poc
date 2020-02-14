@@ -3,13 +3,17 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter  # type: ignore
+from enum import Enum
 
-from typing import Any
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+from wazo_applicationd.models.status import State
+from wazo_applicationd.models.status import Status
 
 router = APIRouter()
 
 
-@router.get("/status")
-async def status() -> Any:
-    return {"state": "ok"}
+@router.get("/status", response_model=Status)
+async def status() -> Status:
+    return Status(state=State.OK)

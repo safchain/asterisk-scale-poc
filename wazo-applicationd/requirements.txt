@@ -30,4 +30,5 @@ yarl==1.4.2
 zipp==0.6.0
 aiohttp==3.6.2
 gila==0.4.0
-git+https://github.com/safchain/asyncio-ari-ast-id.git
+PyJWT==1.7.1
+-e ../wazo-appgateway-client

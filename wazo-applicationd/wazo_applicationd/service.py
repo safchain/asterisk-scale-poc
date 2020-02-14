@@ -8,23 +8,36 @@ import logging
 import time
 
 from typing import Awaitable
+from typing import List
 
+from .discovery import Discovery
 from .config import Config
-from .application import ApplicationCall
 from .context import Context
-from .notifier import Notifier
+from .exceptions import (
+    CallCreateException,
+    NoSuchCallException,
+    NodeCreateException,
+    NodeJoinException,
+)
 
-from openapi_client import Configuration  # type: ignore
-from openapi_client import ApiClient
-from openapi_client import ApiException
+from .models.application import ApplicationCall
+from .models.node import ApplicationNode
+from .models.service import AsteriskService
 
-from openapi_client.api.applications_api import ApplicationsApi  # type: ignore
-from openapi_client.models.application import Application  # type: ignore
+from wazo_appgateway_client import Configuration
+from wazo_appgateway_client import ApiClient
+from wazo_appgateway_client import ApiException
 
-from openapi_client.api.channels_api import ChannelsApi  # type: ignore
-from openapi_client.models.channel import Channel  # type: ignore
+from wazo_appgateway_client.api.applications_api import ApplicationsApi
+from wazo_appgateway_client.models.application import Application
 
-from openapi_client.exceptions import ApiException  # type: ignore
+from wazo_appgateway_client.api.channels_api import ChannelsApi
+from wazo_appgateway_client.models.channel import Channel
+
+from wazo_appgateway_client.api.bridges_api import BridgesApi
+from wazo_appgateway_client.models.bridge import Bridge
+
+from wazo_appgateway_client.exceptions import ApiException
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +46,10 @@ class Service:
 
     config: Config
     api_client: ApiClient
-    notifier: Notifier
 
-    def __init__(self, config: Config, notifier: Notifier) -> None:
+    def __init__(self, config: Config, discovery: Discovery) -> None:
         self.config = config
-        self.notifier = notifier
+        self.discovery = discovery
 
         configuration = Configuration()
         configuration.host = "%s/ari" % config.get("api_endpoint")
@@ -86,9 +98,106 @@ class Service:
 
     async def start_user_outgoing_call(
         self, context: Context, application: Application, channel: Channel
+    ) -> ApplicationCall:
+        try:
+            await self.set_channel_var_sync(
+                context, channel, "WAZO_USER_OUTGOING_CALL", "true"
+            )
+            return await ApplicationCall.from_channel(context, channel)
+        except Exception:
+            raise CallCreateException()
+
+    async def call_answer(self, context: Context, call_id: str) -> None:
+        logger.info("Answering call on channel : %s" % context)
+
+        api = ChannelsApi(self.api_client)
+        try:
+            await api.channels_channel_id_answer_post(
+                call_id, x_asterisk_id=context.asterisk_id
+            )
+        except ApiException:
+            raise NoSuchCallException(call_id)
+
+    async def create_node_with_calls(
+        self, context: Context, application_name: str, call_ids: List[str]
+    ) -> ApplicationNode:
+        # NOTE(safchain) not sure about this, should we generate UUID ?
+        node_uuid = application_name
+
+        api = BridgesApi(self.api_client)
+
+        try:
+            bridge = await api.bridges_bridge_id_get(
+                node_uuid, x_asterisk_id=context.asterisk_id
+            )
+        except ApiException:
+            pass
+
+        if not bridge:
+            try:
+                bridge = await api.bridges_bridge_id_post(
+                    node_uuid, type="mixing", x_asterisk_id=context.asterisk_id
+                )
+            except ApiException:
+                raise NodeCreateException()
+
+        await self._join_bridge(context, bridge.id, call_ids)
+
+        node = ApplicationNode(uuid=node_uuid, call_ids=call_ids)
+
+        # TODO(safchain) !important, this should be atomic
+        master_context = await self.discovery.retrieve_master_node_context(node)
+        if not master_context:
+            await self.discovery.register_master_node(context, node)
+        else:
+            # TODO(safchain) do not hard code extension
+            self._mesh(Context, application_name, master_context.asterisk_id, "6001")
+
+        return node
+
+    async def _mesh(
+        self, context: Context, application_name: str, master_id: str, slave_id: str, exten: str
     ) -> None:
-        await self.set_channel_var_sync(
-            context, channel, "WAZO_USER_OUTGOING_CALL", "true"
+        if master_id == slave_id:
+            return
+
+        # TODO(safchain) check if not already linked
+        channel = await self._dial_asterisk(context, application_name, master_id, exten)
+        
+    async def _join_bridge(
+        self, context: Context, bridge_id: str, call_ids: List[str]
+    ) -> None:
+        api = BridgesApi(self.api_client)
+        try:
+            await api.bridges_bridge_id_add_channel_post(
+                bridge_id, call_ids, x_asterisk_id=context.asterisk_id
+            )
+        except ApiException:
+            raise NodeJoinExcepton()
+
+    async def _dial_asterisk(
+        self, context: Context, application_name: str, asterisk_id: str, exten: str
+    ) -> None:
+        services = self.discovery.retrieve_asterisk_services()
+        for service in services:
+            if asterisk_id == service.id:
+                await self._dial_service_exten(
+                    context, application_uuid, service, exten
+                )
+
+    async def _dial_service_exten(
+        self,
+        context: Context,
+        application_name: str,
+        service: AsteriskService,
+        exten: str, 
+    ) -> None:
+        endpoint = "SIP/{}:{}/{}".format(service.adddress, service.port, exten)
+
+        logger.info("Dialing endpoint %s" % endpoint)
+
+        api = ChannelsApi(self.api_client)
+        await api.channels_post(
+            endpoint, app=application_name, x_asterisk_id=context.asterisk_id
         )
-        call = await ApplicationCall.from_channel(context, channel)
-        await self.notifier.user_outgoing_call_created(context, application, call)
+

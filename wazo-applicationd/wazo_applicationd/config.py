@@ -6,10 +6,10 @@ from __future__ import annotations
 import os
 import yaml
 
-from gila import Gila  # type: ignore
+from gila import Gila
 
 
-class Config(Gila):  # type: ignore
+class Config(Gila):
     def __init__(self) -> None:
         super().__init__()
 
@@ -35,6 +35,8 @@ class Config(Gila):  # type: ignore
 
         self.set_default("consul_host", "127.0.0.1")
         self.set_default("consul_port", 8500)
+
+        self.set_default("jwt_secret", "secret")
 
         self.set_default("debug", True)
 

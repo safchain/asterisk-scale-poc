@@ -8,12 +8,14 @@ import logging
 
 from typing import Any
 
+from .config import Config
 from .bus import Bus
 from .context import Context
 from .bus import StasisEvent
 from .service import Service
+from .events import UserOutgoingCallCreated
 
-from openapi_client.models import StasisStart  # type: ignore
+from wazo_appgateway_client.models import StasisStart
 
 
 logger = logging.getLogger(__name__)
@@ -21,10 +23,12 @@ logger = logging.getLogger(__name__)
 
 class Stasis:
 
+    config: Config
     bus: Bus
     service: Service
 
-    def __init__(self, bus: Bus, service: Service) -> None:
+    def __init__(self, config: Config, bus: Bus, service: Service) -> None:
+        self.config = config
         self.bus = bus
         self.service = service
 
@@ -35,7 +39,7 @@ class Stasis:
         self, context: Context, event: StasisEvent, stasis_start: StasisStart
     ) -> None:
         if not stasis_start.args:
-            return await self.start_user_outgoing(
+            return await self.start_user_outgoing_call(
                 context, event.application_name, stasis_start
             )
 
@@ -45,28 +49,14 @@ class Stasis:
         elif command == "originate":
             pass
 
-        """
-        application_uuid = AppNameHelper.to_uuid(event.get('application'))
-        if not application_uuid:
-            return
-
-        if not event['args']:
-            return self._stasis_start_user_outgoing(application_uuid, event_objects, event)
-
-        command, *command_args = event['args']
-        if command == 'incoming':
-            self._stasis_start_incoming(application_uuid, event_objects, event)
-        elif command == 'originate':
-            node_uuid = command_args[0] if command_args else None
-            self._stasis_start_originate(application_uuid, node_uuid, event_objects, event)
-        """
-
-    async def start_user_outgoing(
+    async def start_user_outgoing_call(
         self, context: Context, application_name: str, stasis_start: StasisStart,
     ) -> None:
         logger.debug("New user outgoing call %s", stasis_start.channel.id)
 
         application = await self.service.get_application(context, application_name)
-        await self.service.start_user_outgoing_call(
+        call = await self.service.start_user_outgoing_call(
             context, application, stasis_start.channel
         )
+        event = UserOutgoingCallCreated(self.config, context, application, call)
+        self.bus.publish(event)

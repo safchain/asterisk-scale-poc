@@ -16,7 +16,6 @@ from .bus import Bus
 from .api import API
 from .discovery import Discovery
 from .stasis import Stasis
-from .notifier import Notifier
 from .service import Service
 
 from swagger_client.models import Message  # type: ignore
@@ -26,11 +25,10 @@ logger = logging.getLogger(__name__)
 
 def run(config: Config) -> None:
     discovery = Discovery(config)
-    api = API(config, discovery)
     bus = Bus(config)
-    notifier = Notifier(config, bus)
-    service = Service(config, notifier)
-    stasis = Stasis(bus, service)
+    service = Service(config, discovery)
+    stasis = Stasis(config, bus, service)
+    api = API(config, discovery, service)
 
     stasis.subscribe_events()
 

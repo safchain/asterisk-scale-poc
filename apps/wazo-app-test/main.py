@@ -17,7 +17,7 @@ c = wazo_auth_client.Client('localhost', username='admin', password='secret', ht
 # Tokens
 reply = c.token.new('wazo_user', expiration=3600, session_type='mobile') 
 print(reply)
-c = wazo_websocketd_client.Client("localhost", port=9502, token=reply["token"], verify_certificate=False, wss=False)
+c = wazo_websocketd_client.Client("localhost", port=9502, token=reply["token"], verify_certificate=False)
 
 def callback(data):
     print("Coucou")
@@ -27,8 +27,9 @@ def callback(data):
     print(call_id)
     context_token = data["context_token"]
 
-    api.answer_call10_applications_app_uuid_calls_call_id_answer_put(app_uuid, call_id, x_context_token=context_token)
+    api.call_answer10_applications_application_uuid_calls_call_id_answer_put(app_uuid, call_id, x_context_token=context_token)
+    api.create_node_with_calls10_applications_application_uuid_nodes_post(app_uuid, [call_id], x_context_token=context_token)
 
-c.on('application_user_outgoing_call_created', callback)
+c.on('user_outgoing_call_created', callback)
 
 c.run()

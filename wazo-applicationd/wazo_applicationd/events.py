@@ -9,10 +9,10 @@ from typing import Dict
 from typing import Any
 from typing import Union
 
-from openapi_client.models.application import Application  # type: ignore
+from wazo_appgateway_client.models.application import Application
 
-from .application import Application as WazoApplication
-from .application import ApplicationCall
+from .models.application import Application as WazoApplication
+from .models.application import ApplicationCall
 from .schemas import application_call_schema
 from .context import Context
 from .config import Config
@@ -65,7 +65,7 @@ class BaseEvent:
     required_acl: Union[str, None]
     application_uuid: str
     origin_uuid: str
-    data: Dict[str, Any]
+    body: Dict[str, Any]
 
     def __init__(self, config: Config, context: Context, application: Application):
         self.application_uuid = WazoApplication.name_to_uuid(application.name)
@@ -73,9 +73,13 @@ class BaseEvent:
         self.required_acl = None
 
         # NOTE(safchain) with a better way to pass the asterisk id, JWT ???
-        self.data = {
-            "context": context.asterisk_id,
-            "application_uuid": self.application_uuid,
+        self.body = {
+            "name": self.name,
+            "origin_uuid": self.origin_uuid,
+            "data": {
+                "context_token": context.to_token(config),
+                "application_uuid": self.application_uuid,
+            },
         }
 
     @property
@@ -90,10 +94,6 @@ class BaseEvent:
 
         return result
 
-    @property
-    def body(self) -> Dict[str, Any]:
-        return self.data or {}
-
 
 class BaseCallItemEvent(BaseEvent):
     def __init__(
@@ -107,9 +107,9 @@ class BaseCallItemEvent(BaseEvent):
 
         self.routing_key = self.routing_key.format(self.application_uuid, call.id)
         self.required_acl = self.required_acl_tmpl.format(self.routing_key)
-        self.data["call"] = application_call_schema.dump(call)
+        self.body["data"]["call"] = application_call_schema.dump(call)
 
 
 class UserOutgoingCallCreated(BaseCallItemEvent):
-    name = "application_user_outgoing_call_created"
+    name = "user_outgoing_call_created"
     routing_key = "applications.{}.user_outgoing_call.{}.created"

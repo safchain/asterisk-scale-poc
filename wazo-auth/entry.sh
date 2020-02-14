@@ -26,7 +26,6 @@ USER_UUID=$( curl -s -X POST "http://localhost:9497/0.1/users" -H  "accept: appl
 ACL_UUID=$( curl -s -X POST "http://localhost:9497/0.1/policies"  -H  "accept: application/json" -H  "Content-Type: application/json" -d "{ \"acl_templates\": [\"events.applications.#\"], \"description\": \"application events\", \"name\": \"application_events\" }"  -H "X-Auth-Token: $TOKEN" | jq -r .uuid )
 curl -X PUT "http://localhost:9497/0.1/users/$USER_UUID/policies/$ACL_UUID" -H  "accept: application/json" -H  "Content-Type: application/json" -d "" -H "X-Auth-Token: $TOKEN"
 
-
 while true; do
     sleep 1
 done

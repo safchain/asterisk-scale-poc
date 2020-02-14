@@ -34,6 +34,24 @@ cat /tmp/openapi3.json | jq '. |= . + {"security": [{"basicAuth": []}]}' | jq '.
 
 api-spec-converter --from=openapi_3 --to=openapi_3 --syntax=yaml --order=alpha /tmp/fixes.json > openapi3.yaml
 
-docker run --rm -v ${PWD}:/wazo-appgateway-client openapitools/openapi-generator-cli generate -i /wazo-appgateway-client/openapi3.yaml -g python --library asyncio --package-name wazo-appgateway-client -o /wazo-appgateway-client
+docker run --rm -v ${PWD}:/wazo-appgateway-client openapitools/openapi-generator-cli generate -i /wazo-appgateway-client/openapi3.yaml -g python --library asyncio --package-name wazo_appgateway_client -o /wazo-appgateway-client
+
+sudo chown -R $UID:$UID $PWD
+
+# patches
+patch wazo_appgateway_client/api_client.py <<EOF
+243a244,254
+>     def deserialize_obj(self, data, response_type):
+>         """Deserializes data into an object.
+> 
+>         :param data: data to be deserialized.
+>         :param response_type: class literal for
+>             deserialized object, or string of class name.
+> 
+>         :return: deserialized object.
+>         """
+>         return self.__deserialize(data, response_type)
+> 
+EOF
 
 rm -rf /tmp/rest-api

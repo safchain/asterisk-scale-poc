@@ -19,11 +19,11 @@ from typing import Callable
 from typing import Dict
 from typing import Awaitable
 
-from openapi_client import ApiClient  # type: ignore
+from wazo_appgateway_client import ApiClient
 
 from .config import Config
 from .context import Context
-from .application import Application
+from .models.application import Application
 from .events import BaseEvent
 
 SERVICE_ID = "wazo-applicationd"
