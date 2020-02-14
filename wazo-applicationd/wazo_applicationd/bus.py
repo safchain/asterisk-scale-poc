@@ -161,6 +161,8 @@ class Bus:
                     logger.error("Error while decoding AMQP message: {}".format(e))
                     continue
 
+                print(queue_msg.body)
+
                 type = obj.get("type")
                 if not type:
                     continue

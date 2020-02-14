@@ -58,4 +58,4 @@ async def create_node_with_calls(
 ) -> ApplicationNode:
     context = Context.from_token(config, x_context_token)
     application_name = Application.uuid_to_name(application_uuid)
-    await service.create_node_with_calls(context, application_uuid, call_ids)
+    await service.create_node_with_calls(context, application_name, call_ids)

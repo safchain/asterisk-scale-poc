@@ -126,6 +126,7 @@ class Service:
 
         api = BridgesApi(self.api_client)
 
+        bridge = None
         try:
             bridge = await api.bridges_bridge_id_get(
                 node_uuid, x_asterisk_id=context.asterisk_id
@@ -147,23 +148,27 @@ class Service:
 
         # TODO(safchain) !important, this should be atomic
         master_context = await self.discovery.retrieve_master_node_context(node)
+        import pdb
+
+        pdb.set_trace()
         if not master_context:
             await self.discovery.register_master_node(context, node)
-        else:
+        elif master_context.asterisk_id != context.asterisk_id:
             # TODO(safchain) do not hard code extension
-            self._mesh(Context, application_name, master_context.asterisk_id, "6001")
+            await self._mesh(
+                context, application_name, master_context.asterisk_id, "6001"
+            )
 
         return node
 
     async def _mesh(
-        self, context: Context, application_name: str, master_id: str, slave_id: str, exten: str
+        self, context: Context, application_name: str, master_id: str, exten: str,
     ) -> None:
-        if master_id == slave_id:
-            return
+        logger.info("start meshing")
 
         # TODO(safchain) check if not already linked
         channel = await self._dial_asterisk(context, application_name, master_id, exten)
-        
+
     async def _join_bridge(
         self, context: Context, bridge_id: str, call_ids: List[str]
     ) -> None:
@@ -178,11 +183,11 @@ class Service:
     async def _dial_asterisk(
         self, context: Context, application_name: str, asterisk_id: str, exten: str
     ) -> None:
-        services = self.discovery.retrieve_asterisk_services()
+        services = await self.discovery.retrieve_asterisk_services()
         for service in services:
             if asterisk_id == service.id:
                 await self._dial_service_exten(
-                    context, application_uuid, service, exten
+                    context, application_name, service, exten
                 )
 
     async def _dial_service_exten(
@@ -190,14 +195,16 @@ class Service:
         context: Context,
         application_name: str,
         service: AsteriskService,
-        exten: str, 
+        exten: str,
     ) -> None:
-        endpoint = "SIP/{}:{}/{}".format(service.adddress, service.port, exten)
+        endpoint = "SIP/{}:{}/{}".format(service.address, service.port, exten)
 
         logger.info("Dialing endpoint %s" % endpoint)
 
         api = ChannelsApi(self.api_client)
-        await api.channels_post(
-            endpoint, app=application_name, x_asterisk_id=context.asterisk_id
+        r = await api.channels_post(
+            endpoint,
+            app=application_name,
+            x_asterisk_id=context.asterisk_id,
+            containers={"variables": {}},
         )
-

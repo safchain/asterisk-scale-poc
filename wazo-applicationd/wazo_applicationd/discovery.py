@@ -107,11 +107,13 @@ class Discovery:
         self, node: ApplicationNode
     ) -> [Context, None]:
         try:
-            index, asterisk_id = c.kv.get("bridges/{}/master".format(node.uuid))
-            return Context(asterisk_id)
+            index, entry = await self.consul.kv.get(
+                "bridges/{}/master".format(node.uuid)
+            )
+            return Context(entry['Value'].decode())
         except Exception as e:
             # TODO(safchain) need to better handling errors
-            pass
+            logger.debug("unable to retrieve master node {}".format(e))
 
     async def register_master_node(
         self, context: Context, node: ApplicationNode
@@ -131,7 +133,7 @@ class Discovery:
         services = []
 
         try:
-            _, nodes = await c.health.service("asterisk")
+            _, nodes = await self.consul.health.service("asterisk")
         except Exception as e:
             logger.error("Consul error: {}".format(e))
             return services
@@ -148,7 +150,7 @@ class Discovery:
                 logger.error("asterisk service definition incomplete")
                 continue
 
-            service = AsteriskService(id, address, port)
+            service = AsteriskService(id=id, address=address, port=port)
             services.append(service)
 
         return services
