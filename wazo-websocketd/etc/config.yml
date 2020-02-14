@@ -1,0 +1,58 @@
+# This file should not be modified as it may get changed by the maintainer.
+# Add extra configuration files in the extra_config_files directory to override
+# the content from this file
+
+## Extra configuration directory where the config files overriding this file
+## should be.
+extra_config_files:
+
+## Change the log level to debug level.
+#debug: false
+
+## Log file.
+#log_file: /var/log/wazo-websocketd.log
+
+## Log level.
+#log_level: info
+
+## User to run process as.
+#user: wazo-websocketd
+
+## PID file.
+#pid_file: /run/wazo-websocketd/wazo-websocketd.pid
+
+## WebSocket server
+websocket:
+#
+#  # Listening address
+  listen: 0.0.0.0
+#
+#  # Listening port
+  port: 9502
+#
+#  certificate: /usr/share/xivo-certs/server.crt
+#  private_key: /usr/share/xivo-certs/server.key
+#
+  ping_interval: 60
+
+## wazo-auth (authentication daemon) connection informations.
+auth:
+  host: wazo-auth
+  port: 9497
+  https: false
+  verify_certificate:
+
+## Event bus (AMQP) connection informations
+bus:
+  host: rabbitmq
+  port: 5672
+  username: guest
+  password: guest
+  exchange_name: wazo-websocketd
+  exchange_type: headers
+  upstream_exchange_name: wazo-applicationd
+  upstream_exchange_type: topic
+
+## Developer options -- do not use them
+#auth_check_strategy: static
+#auth_check_static_interval: 60
