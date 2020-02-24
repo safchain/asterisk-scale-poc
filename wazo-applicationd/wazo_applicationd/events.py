@@ -9,51 +9,14 @@ from typing import Dict
 from typing import Any
 from typing import Union
 
-from wazo_appgateway_client.models.application import Application
+from wazo_appgateway_client.models.application import Application  # type: ignore
 
 from .models.application import Application as WazoApplication
 from .models.application import ApplicationCall
+
 from .schemas import application_call_schema
 from .context import Context
 from .config import Config
-
-"""
-class Marshaler(object):
-
-    content_type = 'application/json'
-
-    def __init__(self, uuid):
-        self._uuid = uuid
-
-    def metadata(self, command):
-        result = {
-            'name': command.name,
-            'origin_uuid': self._uuid,
-        }
-
-        if hasattr(command, 'required_acl'):
-            result['required_acl'] = command.required_acl
-
-        return result
-
-    def marshal_message(self, command):
-        body = dict(self.metadata(command))
-        body['data'] = command.marshal()
-        return json.dumps(body)
-
-    @classmethod
-    def unmarshal_message(cls, obj, event_class):
-        if not isinstance(obj, dict):
-            raise InvalidMessage(obj)
-        if 'data' not in obj:
-            raise InvalidMessage(obj)
-        if 'origin_uuid' not in obj:
-            raise InvalidMessage(obj)
-
-        event = event_class.unmarshal(obj['data'])
-        event.metadata = {'origin_uuid': obj['origin_uuid']}
-        return event
-"""
 
 
 class BaseEvent:

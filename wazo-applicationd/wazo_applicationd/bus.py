@@ -19,7 +19,7 @@ from typing import Callable
 from typing import Dict
 from typing import Awaitable
 
-from wazo_appgateway_client import ApiClient
+from wazo_appgateway_client import ApiClient  # type: ignore
 
 from .config import Config
 from .context import Context

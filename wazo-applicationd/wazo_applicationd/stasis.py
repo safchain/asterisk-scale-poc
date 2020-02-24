@@ -15,7 +15,7 @@ from .bus import StasisEvent
 from .service import Service
 from .events import UserOutgoingCallCreated
 
-from wazo_appgateway_client.models import StasisStart
+from wazo_appgateway_client.models import StasisStart  # type: ignore
 
 
 logger = logging.getLogger(__name__)

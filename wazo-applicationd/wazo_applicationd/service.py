@@ -24,20 +24,25 @@ from .models.application import ApplicationCall
 from .models.node import ApplicationNode
 from .models.service import AsteriskService
 
-from wazo_appgateway_client import Configuration
-from wazo_appgateway_client import ApiClient
-from wazo_appgateway_client import ApiException
+from wazo_appgateway_client import (  # type: ignore
+    Configuration,
+    ApiClient,
+    ApiException,
+)
 
-from wazo_appgateway_client.api.applications_api import ApplicationsApi
-from wazo_appgateway_client.models.application import Application
+from wazo_appgateway_client.api.applications_api import (  # type: ignore
+    ApplicationsApi,
+    ChannelsApi,
+    BridgesApi,
+)
 
-from wazo_appgateway_client.api.channels_api import ChannelsApi
-from wazo_appgateway_client.models.channel import Channel
+from wazo_appgateway_client.models.application import (  # type: ignore
+    Application,
+    Channel,
+    Bridge,
+)
 
-from wazo_appgateway_client.api.bridges_api import BridgesApi
-from wazo_appgateway_client.models.bridge import Bridge
-
-from wazo_appgateway_client.exceptions import ApiException
+from wazo_appgateway_client.exceptions import ApiException  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -148,9 +153,6 @@ class Service:
 
         # TODO(safchain) !important, this should be atomic
         master_context = await self.discovery.retrieve_master_node_context(node)
-        import pdb
-
-        pdb.set_trace()
         if not master_context:
             await self.discovery.register_master_node(context, node)
         elif master_context.asterisk_id != context.asterisk_id:
@@ -178,7 +180,7 @@ class Service:
                 bridge_id, call_ids, x_asterisk_id=context.asterisk_id
             )
         except ApiException:
-            raise NodeJoinExcepton()
+            raise NodeJoinException()
 
     async def _dial_asterisk(
         self, context: Context, application_name: str, asterisk_id: str, exten: str

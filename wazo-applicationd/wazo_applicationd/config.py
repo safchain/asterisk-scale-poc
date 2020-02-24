@@ -6,7 +6,7 @@ from __future__ import annotations
 import os
 import yaml
 
-from gila import Gila
+from gila import Gila  # type: ignore
 
 
 class Config(Gila):

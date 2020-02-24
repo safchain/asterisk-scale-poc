@@ -12,6 +12,7 @@ from marshmallow import (
 )
 
 from typing import Any
+from typing import Mapping
 
 
 class StrictDict(fields.Dict):
@@ -31,8 +32,8 @@ class StrictDict(fields.Dict):
         self.key_field = key_field
         self.value_field = value_field
 
-    def _deserialize(self, value, attr, data, **kwargs):  # type: ignore
-        values = super()._deserialize(values, attr, data, **kwargs)  # type: ignore
+    def _deserialize(self, value: Any, attr: str = None, data: Mapping[str, Any] = None, **kwargs: Any):
+        values = super()._deserialize(value, attr, data, **kwargs)
 
         result = {}
         for key, value in values.items():
@@ -47,7 +48,7 @@ class BaseSchema(Schema):
         unknown = EXCLUDE
 
     @pre_load
-    def ensure_dict(self, data):  # type: ignore
+    def ensure_dict(self, data):
         return data or {}
 
 

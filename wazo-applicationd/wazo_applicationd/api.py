@@ -7,7 +7,7 @@ import asyncio
 import logging
 import consul.aio  # type: ignore
 import uvicorn  # type: ignore
-from fastapi import FastAPI
+from fastapi import FastAPI  # type: ignore
 from starlette.requests import Request
 from starlette.responses import Response
 

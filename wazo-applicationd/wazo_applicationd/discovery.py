@@ -64,8 +64,6 @@ class Discovery:
             )
             if response is not True:
                 raise Exception("error", "registering service {}".format(name))
-        except asyncio.CancelledError:
-            return
         except Exception as e:
             logger.error("Consul error: {}".format(e))
 
@@ -105,15 +103,17 @@ class Discovery:
 
     async def retrieve_master_node_context(
         self, node: ApplicationNode
-    ) -> [Context, None]:
+    ) -> Union[Context, None]:
         try:
             index, entry = await self.consul.kv.get(
                 "bridges/{}/master".format(node.uuid)
             )
-            return Context(entry['Value'].decode())
+            return Context(entry["Value"].decode())
         except Exception as e:
             # TODO(safchain) need to better handling errors
             logger.debug("unable to retrieve master node {}".format(e))
+
+        return None
 
     async def register_master_node(
         self, context: Context, node: ApplicationNode
@@ -130,7 +130,7 @@ class Discovery:
             logger.error("Consul error: {}".format(e))
 
     async def retrieve_asterisk_services(self) -> List[AsteriskService]:
-        services = []
+        services: List[AsteriskService] = []
 
         try:
             _, nodes = await self.consul.health.service("asterisk")
