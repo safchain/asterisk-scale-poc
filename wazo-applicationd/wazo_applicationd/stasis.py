@@ -38,6 +38,19 @@ class Stasis:
     async def on_stasis_start(
         self, context: Context, event: StasisEvent, stasis_start: StasisStart
     ) -> None:
+
+        # if related(cross asterisk call) push the call to the bridge
+        node_uuid = await self.service.get_related_node_uuid(
+            context, stasis_start.channel
+        )
+        if node_uuid:
+            await self.service.call_answer(context, stasis_start.channel.id)
+
+            logger.debug("Add related call to the node %s", node_uuid)
+            return await self.service.insert_call_to_node(
+                context, node_uuid, stasis_start.channel.id
+            )
+
         if not stasis_start.args:
             return await self.start_user_outgoing_call(
                 context, event.application_name, stasis_start

@@ -2,7 +2,7 @@ from debian:buster
 
 WORKDIR /tmp
 RUN apt-get update
-RUN apt-get install -y git librabbitmq-dev
+RUN apt-get install -y git librabbitmq-dev wget
 
 #RUN apt-get install -y software-properties-common wget gnupg
 #RUN add-apt-repository 'deb http://mirror.wazo.community/debian pelican-buster main'
@@ -66,9 +66,15 @@ RUN make clean
 RUN CFLAGS="-I../wazo-res-amqp -g" make
 RUN make install DOCDIR=/var/lib/asterisk/documentation/thirdparty/
 
-ADD etc/asterisk/* /etc/asterisk/
+# ADD SNGREP
+RUN wget http://packages.irontec.com/public.key -q -O - | apt-key add -
+RUN apt-get update
+RUN apt-get install -y sngrep
 
 ENTRYPOINT /usr/sbin/asterisk -f
+
+# ADD CONFIG FILES
+ADD etc/asterisk/* /etc/asterisk/
 
 #ADD ./entry.sh /
 #ENTRYPOINT /entry.sh

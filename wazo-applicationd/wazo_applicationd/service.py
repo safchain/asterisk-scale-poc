@@ -7,8 +7,7 @@ import asyncio
 import logging
 import time
 
-from typing import Awaitable
-from typing import List
+from typing import Awaitable, List, Union, Dict
 
 from .discovery import Discovery
 from .config import Config
@@ -30,21 +29,19 @@ from wazo_appgateway_client import (  # type: ignore
     ApiException,
 )
 
-from wazo_appgateway_client.api.applications_api import (  # type: ignore
-    ApplicationsApi,
-    ChannelsApi,
-    BridgesApi,
-)
+from wazo_appgateway_client.api.applications_api import ApplicationsApi  # type: ignore
+from wazo_appgateway_client.api.channels_api import ChannelsApi  # type: ignore
+from wazo_appgateway_client.api.bridges_api import BridgesApi  # type: ignore
 
-from wazo_appgateway_client.models.application import (  # type: ignore
-    Application,
-    Channel,
-    Bridge,
-)
+from wazo_appgateway_client.models.application import Application  # type: ignore
+from wazo_appgateway_client.models.channel import Channel  # type: ignore
+from wazo_appgateway_client.models.bridge import Bridge  # type: ignore
 
 from wazo_appgateway_client.exceptions import ApiException  # type: ignore
 
 logger = logging.getLogger(__name__)
+
+RELATED_NODE_UUID_HEADER = "X-Related-Node-UUID"
 
 
 class Service:
@@ -71,7 +68,22 @@ class Service:
             application_name, x_asterisk_id=context.asterisk_id
         )
 
-    async def set_channel_var_sync(
+    async def get_channel_var(
+        self, context: Context, channel: Channel, var: str
+    ) -> Union[str, None]:
+        api = ChannelsApi(self.api_client)
+        try:
+            res = await api.channels_channel_id_variable_get(
+                channel.id, var, x_asterisk_id=context.asterisk_id
+            )
+            return res.value
+        except ApiException as e:
+            logging.error(
+                "Unable to get variable to channel {} : {}".format(channel.id, e)
+            )
+        return None
+
+    async def set_channel_var(
         self, context: Context, channel: Channel, var: str, value: str, retry: int = 20,
     ) -> None:
         api = ChannelsApi(self.api_client)
@@ -83,7 +95,6 @@ class Service:
             logging.error(
                 "Unable to set variable to channel {} : {}".format(channel.id, e)
             )
-            return
 
         # TODO remove this when Asterisk gets fixed to set var synchronously
         for _ in range(retry + 1):
@@ -105,15 +116,16 @@ class Service:
         self, context: Context, application: Application, channel: Channel
     ) -> ApplicationCall:
         try:
-            await self.set_channel_var_sync(
-                context, channel, "WAZO_USER_OUTGOING_CALL", "true"
-            )
+            # NOTE(safchain) reintroduce if needed
+            # await self.set_channel_var(
+            #    context, channel, "WAZO_USER_OUTGOING_CALL", "true"
+            # )
             return await ApplicationCall.from_channel(context, channel)
         except Exception:
             raise CallCreateException()
 
     async def call_answer(self, context: Context, call_id: str) -> None:
-        logger.info("Answering call on channel : %s" % context)
+        logger.info("Answering call {}".format(call_id))
 
         api = ChannelsApi(self.api_client)
         try:
@@ -122,6 +134,19 @@ class Service:
             )
         except ApiException:
             raise NoSuchCallException(call_id)
+
+    async def insert_call_to_node(
+        self, context: Context, node_uuid: str, call_id: str
+    ) -> None:
+        api = BridgesApi(self.api_client)
+        try:
+            bridge = await api.bridges_bridge_id_get(
+                node_uuid, x_asterisk_id=context.asterisk_id
+            )
+
+            await self._join_bridge(context, bridge.id, [call_id])
+        except ApiException:
+            pass
 
     async def create_node_with_calls(
         self, context: Context, application_name: str, call_ids: List[str]
@@ -158,18 +183,29 @@ class Service:
         elif master_context.asterisk_id != context.asterisk_id:
             # TODO(safchain) do not hard code extension
             await self._mesh(
-                context, application_name, master_context.asterisk_id, "6001"
+                context,
+                application_name,
+                master_context.asterisk_id,
+                "6001",
+                {RELATED_NODE_UUID_HEADER: node_uuid},
             )
 
         return node
 
     async def _mesh(
-        self, context: Context, application_name: str, master_id: str, exten: str,
+        self,
+        context: Context,
+        application_name: str,
+        master_id: str,
+        exten: str,
+        variables: Dict[str, str] = {},
     ) -> None:
         logger.info("start meshing")
 
         # TODO(safchain) check if not already linked
-        channel = await self._dial_asterisk(context, application_name, master_id, exten)
+        channel = await self._dial_asterisk_id(
+            context, application_name, master_id, exten, variables
+        )
 
     async def _join_bridge(
         self, context: Context, bridge_id: str, call_ids: List[str]
@@ -182,14 +218,19 @@ class Service:
         except ApiException:
             raise NodeJoinException()
 
-    async def _dial_asterisk(
-        self, context: Context, application_name: str, asterisk_id: str, exten: str
+    async def _dial_asterisk_id(
+        self,
+        context: Context,
+        application_name: str,
+        asterisk_id: str,
+        exten: str,
+        variables: Dict[str, str] = {},
     ) -> None:
         services = await self.discovery.retrieve_asterisk_services()
         for service in services:
             if asterisk_id == service.id:
                 await self._dial_service_exten(
-                    context, application_name, service, exten
+                    context, application_name, service, exten, variables
                 )
 
     async def _dial_service_exten(
@@ -198,15 +239,36 @@ class Service:
         application_name: str,
         service: AsteriskService,
         exten: str,
+        variables: Dict[str, str] = {},
     ) -> None:
-        endpoint = "SIP/{}:{}/{}".format(service.address, service.port, exten)
+        # endpoint = "PJSIP/outgoing/sip:{}:1@{}:{}".format(exten, service.address, service.port)
+        endpoint = "SIP/%s:%s/%s" % (service.address, service.port, exten)
 
         logger.info("Dialing endpoint %s" % endpoint)
 
         api = ChannelsApi(self.api_client)
-        r = await api.channels_post(
+        await api.channels_post(
             endpoint,
             app=application_name,
             x_asterisk_id=context.asterisk_id,
-            containers={"variables": {}},
+            containers={"variables": self._normalize_variables(variables)},
         )
+
+    def _normalize_variables(self, variables: Dict[str, str]) -> Dict[str, str]:
+        i = 0
+        normalized: Dict[str, str] = {}
+
+        for k, v in variables.items():
+            h = "SIPADDHEADER{}".format(i)
+            normalized[h] = "{}: {}".format(k, v)
+            i = i + 1
+
+        return normalized
+
+    async def get_related_node_uuid(
+        self, context: Context, channel: Channel
+    ) -> Union[str, None]:
+        return await self.get_channel_var(
+            context, channel, "SIP_HEADER({})".format(RELATED_NODE_UUID_HEADER),
+        )
+

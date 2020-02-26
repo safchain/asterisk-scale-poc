@@ -19,6 +19,8 @@ reply = c.token.new('wazo_user', expiration=3600, session_type='mobile')
 print(reply)
 c = wazo_websocketd_client.Client("localhost", port=9502, token=reply["token"], verify_certificate=False)
 
+done = False
+
 def callback(data):
     print("Coucou")
     print(data)

@@ -1,0 +1,61 @@
+[transport]
+type = transport
+protocol = udp
+bind = 0.0.0.0
+
+[1001]
+type = aor
+max_contacts = 10
+
+[demo]
+type = auth
+username = demo
+password = demo
+
+[1001]
+type = endpoint
+allow = ulaw
+auth = demo
+outbound_auth = demo
+aors = 1001
+
+[1002]
+type = aor
+max_contacts = 10
+
+[demo1]
+type = auth
+username = demo1
+password = demo1
+
+[1002]
+type = endpoint
+allow = ulaw
+auth = demo1
+outbound_auth = demo1
+aors = 1002
+
+[outgoing]
+type = aor
+maximum_expiration = 60
+minimum_expiration = 60
+default_expiration = 180
+
+[outgoing]
+type = identify
+endpoint = outgoing
+
+[outgoing]
+type = endpoint
+context = default
+dtmf_mode = none
+disallow = all
+allow = all
+rtp_symmetric = yes
+force_rport = yes
+rewrite_contact = yes
+direct_media = no
+language = en
+aors = outgoing
+t38_udptl = yes
+t38_udptl_ec = none
