@@ -53,7 +53,7 @@ class Stasis:
 
         if not stasis_start.args:
             return await self.start_user_outgoing_call(
-                context, event.application_name, stasis_start
+                context, event.application_uuid, stasis_start
             )
 
         command, *command_args = stasis_start.args
@@ -63,11 +63,11 @@ class Stasis:
             pass
 
     async def start_user_outgoing_call(
-        self, context: Context, application_name: str, stasis_start: StasisStart,
+        self, context: Context, application_uuid: str, stasis_start: StasisStart,
     ) -> None:
         logger.debug("New user outgoing call %s", stasis_start.channel.id)
 
-        application = await self.service.get_application(context, application_name)
+        application = await self.service.get_application(context, application_uuid)
         call = await self.service.start_user_outgoing_call(
             context, application, stasis_start.channel
         )

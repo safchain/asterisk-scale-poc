@@ -29,11 +29,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/applications/{application_uuid}", response_model=Application)
+@router.post("/applications/{application_name}", response_model=Application)
 async def register_application(
-    application_uuid: str, discovery: Discovery = Depends(get_discovery)
+    application_name: str, discovery: Discovery = Depends(get_discovery)
 ) -> Application:
-    return await discovery.register_application(application_uuid)
+    return await discovery.register_application(application_name)
 
 
 @router.put("/applications/{application_uuid}/calls/{call_id}/answer")
@@ -48,14 +48,14 @@ async def call_answer(
     await service.call_answer(context, call_id)
 
 
-@router.post("/applications/{application_uuid}/nodes", response_model=ApplicationNode)
+@router.post("/applications/{application_uuid}/nodes/{node_name}", response_model=ApplicationNode)
 async def create_node_with_calls(
     application_uuid: str,
+    node_name: str,
     call_ids: List[str],
     x_context_token: str = Header(None),
     config: Config = Depends(get_config),
     service: Service = Depends(get_service),
 ) -> ApplicationNode:
     context = Context.from_token(config, x_context_token)
-    application_name = Application.uuid_to_name(application_uuid)
-    await service.create_node_with_calls(context, application_name, call_ids)
+    await service.create_node_with_calls(context, application_uuid, node_name, call_ids)

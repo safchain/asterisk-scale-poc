@@ -34,11 +34,11 @@ logger = logging.getLogger(__name__)
 class StasisEvent:
 
     asterisk_id: str
-    application_name: str
+    application_uuid: str
 
-    def __init__(self, asterisk_id: str, application_name: str) -> None:
+    def __init__(self, asterisk_id: str, application_uuid: str) -> None:
         self.asterisk_id = asterisk_id
-        self.application_name = application_name
+        self.application_uuid = application_uuid
 
 
 class Consumer:
@@ -74,10 +74,10 @@ class Bus:
         self.out_queue = asyncio.Queue()
 
         await asyncio.gather(
-            self.reconnector(in_queue, self.out_queue), self.consume_msgs(in_queue)
+            self._reconnector(in_queue, self.out_queue), self._consume_msgs(in_queue)
         )
 
-    async def consume(
+    async def _consume(
         self, connection: Connection, queue: Queue[IncomingMessage]
     ) -> None:
         channel = await connection.open_channel()
@@ -94,15 +94,15 @@ class Bus:
         consumer = Consumer(queue)
         await amqp_queue.consume(consumer)
 
-    async def produce(self, connection: Connection, queue: Queue[BaseEvent]) -> None:
+    async def _produce(self, connection: Connection, queue: Queue[BaseEvent]) -> None:
         channel = await connection.open_channel()
 
         # NOTE(safchain) exchange name part of the config file
         exchange = await channel.declare_exchange(SERVICE_ID, "topic")
 
-        await self.produce_msgs(connection, exchange, queue)
+        await self._produce_msgs(connection, exchange, queue)
 
-    async def reconnector(
+    async def _reconnector(
         self, in_queue: Queue[IncomingMessage], out_queue: Queue[BaseEvent]
     ) -> None:
         loop = asyncio.get_event_loop()
@@ -120,8 +120,8 @@ class Bus:
                         )
 
                         asyncio.gather(
-                            self.consume(connection, in_queue),
-                            self.produce(connection, out_queue),
+                            self._consume(connection, in_queue),
+                            self._produce(connection, out_queue),
                         )
                     except asynqp.AMQPError as err:
                         logger.error("Connection error {}".format(err))
@@ -147,7 +147,7 @@ class Bus:
             if connection is not None:
                 await connection.close()
 
-    async def consume_msgs(self, queue: Queue[IncomingMessage]) -> None:
+    async def _consume_msgs(self, queue: Queue[IncomingMessage]) -> None:
         api = ApiClient()
 
         try:
@@ -174,15 +174,15 @@ class Bus:
                     logger.error("Error message without asterisk id: {}".format(obj))
                     continue
 
-                application_name = obj.get("application")
+                application_uuid = obj.get("application")
 
                 # fall back
-                if not application_name:
+                if not application_uuid:
                     channel = obj.get("channel", {})
                     dialplan = channel.get("dialplan", {})
-                    application_name = dialplan.get("app_data")
+                    application_uuid = dialplan.get("app_data")
 
-                if not Application.is_valid(application_name):
+                if not Application.is_valid_uuid(application_uuid):
                     logger.error("Error not a valid application: {}".format(obj))
                     continue
 
@@ -190,23 +190,23 @@ class Bus:
                 cb = self.StasisEvent_cbs.get(type)
                 if cb:
                     context = Context(asterisk_id)
-                    event = StasisEvent(asterisk_id, application_name)
+                    event = StasisEvent(asterisk_id, application_uuid)
 
                     await cb(context, event, msg)
 
         except asyncio.CancelledError:
             pass
 
-    def event_to_msg(self, event: BaseEvent) -> Message:
+    def _event_to_msg(self, event: BaseEvent) -> Message:
         return Message(event.body, headers=event.metadata)
 
-    async def produce_msgs(
+    async def _produce_msgs(
         self, connection: Connection, exchange: Exchange, queue: Queue[BaseEvent]
     ) -> None:
         try:
             while True:
                 event = await queue.get()
-                msg = self.event_to_msg(event)
+                msg = self._event_to_msg(event)
                 logger.debug('Publishing event "%s": %s', event.name, msg)
                 exchange.publish(msg, event.routing_key, mandatory=False)
 

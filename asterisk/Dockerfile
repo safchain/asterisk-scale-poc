@@ -14,12 +14,8 @@ RUN apt-get install -y git librabbitmq-dev wget
 #    procps vim libjansson-dev curl
 
 RUN git clone https://github.com/asterisk/asterisk.git /usr/src/asterisk
-ADD patches/ /usr/src/asterisk/patches
 
 WORKDIR /usr/src/asterisk
-
-# apply patches
-
 
 RUN DEBIAN_FRONTEND=noninteractive ./contrib/scripts/install_prereq install
 RUN ./configure

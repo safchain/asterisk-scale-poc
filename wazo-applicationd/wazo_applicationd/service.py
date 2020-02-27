@@ -6,9 +6,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import uuid
 
 from typing import Awaitable, List, Union, Dict
 
+from .resource import ResourceUUID
 from .discovery import Discovery
 from .config import Config
 from .context import Context
@@ -61,11 +63,11 @@ class Service:
         self.api_client = ApiClient(configuration)
 
     async def get_application(
-        self, context: Context, application_name: str
+        self, context: Context, application_uuid: str
     ) -> Application:
         api = ApplicationsApi(self.api_client)
         return await api.applications_application_name_get(
-            application_name, x_asterisk_id=context.asterisk_id
+            application_uuid, x_asterisk_id=context.asterisk_id
         )
 
     async def get_channel_var(
@@ -149,10 +151,13 @@ class Service:
             pass
 
     async def create_node_with_calls(
-        self, context: Context, application_name: str, call_ids: List[str]
+        self,
+        context: Context,
+        application_uuid: str,
+        node_name: str,
+        call_ids: List[str],
     ) -> ApplicationNode:
-        # NOTE(safchain) not sure about this, should we generate UUID ?
-        node_uuid = application_name
+        node_uuid = ResourceUUID(application_uuid, node_name)
 
         api = BridgesApi(self.api_client)
 
@@ -172,9 +177,17 @@ class Service:
             except ApiException:
                 raise NodeCreateException()
 
-        await self._join_bridge(context, bridge.id, call_ids)
+        curr_ids = set(bridge.channels)
 
-        node = ApplicationNode(uuid=node_uuid, call_ids=call_ids)
+        # compute the diff in order to insert only no existing channels
+        add_ids = set(call_ids) - curr_ids
+
+        # compute the list of current call ids
+        full_ids = list(curr_ids | add_ids)
+
+        await self._join_bridge(context, bridge.id, list(add_ids))
+
+        node = ApplicationNode(uuid=node_uuid, call_ids=full_ids)
 
         # TODO(safchain) !important, this should be atomic
         master_context = await self.discovery.retrieve_master_node_context(node)
@@ -184,7 +197,7 @@ class Service:
             # TODO(safchain) do not hard code extension
             await self._mesh(
                 context,
-                application_name,
+                application_uuid,
                 master_context.asterisk_id,
                 "6001",
                 {RELATED_NODE_UUID_HEADER: node_uuid},
@@ -195,7 +208,7 @@ class Service:
     async def _mesh(
         self,
         context: Context,
-        application_name: str,
+        application_uuid: str,
         master_id: str,
         exten: str,
         variables: Dict[str, str] = {},
@@ -203,8 +216,8 @@ class Service:
         logger.info("start meshing")
 
         # TODO(safchain) check if not already linked
-        channel = await self._dial_asterisk_id(
-            context, application_name, master_id, exten, variables
+        await self._dial_asterisk_id(
+            context, application_uuid, master_id, exten, variables
         )
 
     async def _join_bridge(
@@ -236,7 +249,7 @@ class Service:
     async def _dial_service_exten(
         self,
         context: Context,
-        application_name: str,
+        application_uuid: str,
         service: AsteriskService,
         exten: str,
         variables: Dict[str, str] = {},
@@ -249,7 +262,7 @@ class Service:
         api = ChannelsApi(self.api_client)
         await api.channels_post(
             endpoint,
-            app=application_name,
+            app=application_uuid,
             x_asterisk_id=context.asterisk_id,
             containers={"variables": self._normalize_variables(variables)},
         )

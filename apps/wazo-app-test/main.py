@@ -33,7 +33,9 @@ def callback(data):
     api.call_answer10_applications_application_uuid_calls_call_id_answer_put(app_uuid, call_id, x_context_token=context_token)
     
     print("create node add to bridge")
-    api.create_node_with_calls10_applications_application_uuid_nodes_post(app_uuid, [call_id], x_context_token=context_token)
+    api.create_node_with_calls10_applications_application_uuid_nodes_node_name_post(app_uuid, "bigone", [call_id], x_context_token=context_token)
+
+    print("success !!!")
 
 c.on('user_outgoing_call_created', callback)
 

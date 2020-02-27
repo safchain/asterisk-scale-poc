@@ -31,7 +31,7 @@ class BaseEvent:
     body: Dict[str, Any]
 
     def __init__(self, config: Config, context: Context, application: Application):
-        self.application_uuid = WazoApplication.name_to_uuid(application.name)
+        self.application_uuid = application.name
         self.origin_uuid = config.get("uuid")
         self.required_acl = None
 

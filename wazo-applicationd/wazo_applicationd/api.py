@@ -44,17 +44,17 @@ class API:
             version="0.1.0",
         )
 
-        self.setup_middlewares()
-        self.setup_routes()
+        self._setup_middlewares()
+        self._setup_routes()
 
-    def setup_routes(self) -> None:
+    def _setup_routes(self) -> None:
         self.app.include_router(status.router, tags=["status"])
         self.app.include_router(application.router, prefix="/1.0", tags=["application"])
 
-    def setup_middlewares(self) -> None:
-        self.app.middleware("http")(self.inject_deps)
+    def _setup_middlewares(self) -> None:
+        self.app.middleware("http")(self._inject_deps)
 
-    async def inject_deps(
+    async def _inject_deps(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         response = Response("Internal server error", status_code=500)

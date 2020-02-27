@@ -14,6 +14,7 @@ from typing import Union
 
 from .config import Config
 from .context import Context
+from .resource import ResourceUUID
 
 from .models.application import Application
 from .models.node import ApplicationNode
@@ -44,17 +45,21 @@ class Discovery:
         logger.info("Discovery start")
         await self._register_service()
 
-    async def register_application(self, uuid: str) -> Application:
-        application = Application(uuid=uuid)
-        name = application.name
+    async def register_application(self, name: str) -> Application:
+        application = Application(uuid=ResourceUUID(name))
+        application_uuid = application.uuid
 
         logger.info("Registering application {} in Consul".format(name))
         try:
-            response = await self.consul.kv.put("applications/{}".format(name), name)
+            response = await self.consul.kv.put(
+                "applications/{}".format(application_uuid), application_uuid
+            )
             if response is not True:
-                raise Exception("error", "registering application {}".format(name))
+                raise Exception("error", "registering app {}".format(name))
 
-            service_id = "apps/{}".format(name)
+            # NOTE(safchain) do we need to have a app healthcheck ???
+            """
+            service_id = "apps/{}".format(application.uuid)
 
             response = await self.consul.agent.service.register(
                 name,
@@ -64,6 +69,7 @@ class Discovery:
             )
             if response is not True:
                 raise Exception("error", "registering service {}".format(name))
+            """
         except Exception as e:
             logger.error("Consul error: {}".format(e))
 
@@ -105,9 +111,7 @@ class Discovery:
         self, node: ApplicationNode
     ) -> Union[Context, None]:
         try:
-            index, entry = await self.consul.kv.get(
-                "bridges/{}/master".format(node.uuid)
-            )
+            _, entry = await self.consul.kv.get("bridges/{}/master".format(node.uuid))
             return Context(entry["Value"].decode())
         except Exception as e:
             # TODO(safchain) need to better handling errors

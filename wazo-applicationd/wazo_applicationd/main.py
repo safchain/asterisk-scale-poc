@@ -18,7 +18,7 @@ from .discovery import Discovery
 from .stasis import Stasis
 from .service import Service
 
-from swagger_client.models import Message  # type: ignore
+from wazo_appgateway_client.models import Message  # type: ignore
 
 logger = logging.getLogger(__name__)
 

@@ -31,4 +31,5 @@ zipp==0.6.0
 aiohttp==3.6.2
 gila==0.4.0
 PyJWT==1.7.1
+marshmallow==3.5.0
 -e ../wazo-appgateway-client
