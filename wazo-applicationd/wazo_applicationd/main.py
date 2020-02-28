@@ -17,6 +17,7 @@ from .api import API
 from .discovery import Discovery
 from .stasis import Stasis
 from .service import Service
+from .resources import ResourceKeeper
 
 from wazo_appgateway_client.models import Message  # type: ignore
 
@@ -26,8 +27,9 @@ logger = logging.getLogger(__name__)
 def run(config: Config) -> None:
     discovery = Discovery(config)
     bus = Bus(config)
-    service = Service(config, discovery)
-    stasis = Stasis(config, bus, service)
+    rk = ResourceKeeper(config)
+    service = Service(config, discovery, rk)
+    stasis = Stasis(config, bus, service, discovery, rk)
     api = API(config, discovery, service)
 
     stasis.subscribe_events()

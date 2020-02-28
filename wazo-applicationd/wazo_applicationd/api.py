@@ -30,15 +30,15 @@ class API:
 
     config: Config
     discovery: Discovery
-    fastapi: FastAPI
     service: Service
+    _app: FastAPI
 
     def __init__(self, config: Config, discovery: Discovery, service: Service):
         self.config = config
         self.discovery = discovery
         self.service = service
 
-        self.app = FastAPI(
+        self._app = FastAPI(
             title="Wazo applicationd",
             description="Applicationd blah blah",
             version="0.1.0",
@@ -48,11 +48,13 @@ class API:
         self._setup_routes()
 
     def _setup_routes(self) -> None:
-        self.app.include_router(status.router, tags=["status"])
-        self.app.include_router(application.router, prefix="/1.0", tags=["application"])
+        self._app.include_router(status.router, tags=["status"])
+        self._app.include_router(
+            application.router, prefix="/1.0", tags=["application"]
+        )
 
     def _setup_middlewares(self) -> None:
-        self.app.middleware("http")(self._inject_deps)
+        self._app.middleware("http")(self._inject_deps)
 
     async def _inject_deps(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -77,7 +79,7 @@ class API:
                 log_level = logging.DEBUG
 
             config = uvicorn.Config(
-                self.app,
+                self._app,
                 host="0.0.0.0",
                 port=self.config.get("port"),
                 log_level=log_level,

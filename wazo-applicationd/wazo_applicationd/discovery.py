@@ -7,14 +7,13 @@ import asyncio
 from asyncio import Queue
 import consul.aio  # type: ignore
 import logging
-from dataclasses import dataclass
 
 from typing import List
 from typing import Union
 
 from .config import Config
 from .context import Context
-from .resource import ResourceUUID
+from .resources import ResourceUUID
 
 from .models.application import Application
 from .models.node import ApplicationNode
@@ -28,14 +27,14 @@ SERVICE_ID = "applicationd"
 class Discovery:
 
     config: Config
-    consul: consul.aoi.Consul
+    _consul: consul.aoi.Consul
 
     def __init__(self, config: Config) -> None:
         self.config = config
 
         loop = asyncio.get_event_loop()
 
-        self.consul = consul.aio.Consul(
+        self._consul = consul.aio.Consul(
             host=self.config.get("consul_host"),
             port=self.config.get("consul_port"),
             loop=loop,
@@ -51,7 +50,7 @@ class Discovery:
 
         logger.info("Registering application {} in Consul".format(name))
         try:
-            response = await self.consul.kv.put(
+            response = await self._consul.kv.put(
                 "applications/{}".format(application_uuid), application_uuid
             )
             if response is not True:
@@ -61,7 +60,7 @@ class Discovery:
             """
             service_id = "apps/{}".format(application.uuid)
 
-            response = await self.consul.agent.service.register(
+            response = await self._consul.agent.service.register(
                 name,
                 service_id=service_id,
                 address=self.config.get("host"),
@@ -78,7 +77,7 @@ class Discovery:
     async def _register_service(self) -> None:
         while True:
             try:
-                response = await self.consul.agent.service.register(
+                response = await self._consul.agent.service.register(
                     SERVICE_ID,
                     service_id=SERVICE_ID,
                     address=self.config.get("host"),
@@ -91,7 +90,7 @@ class Discovery:
                     self.config.get("host"),
                     self.config.get("port"),
                 )
-                response = await self.consul.agent.check.register(
+                response = await self._consul.agent.check.register(
                     SERVICE_ID,
                     consul.Check.http(status_url, "5s"),
                     service_id=SERVICE_ID,
@@ -107,37 +106,11 @@ class Discovery:
 
             await asyncio.sleep(5)
 
-    async def retrieve_master_node_context(
-        self, node: ApplicationNode
-    ) -> Union[Context, None]:
-        try:
-            _, entry = await self.consul.kv.get("bridges/{}/master".format(node.uuid))
-            return Context(entry["Value"].decode())
-        except Exception as e:
-            # TODO(safchain) need to better handling errors
-            logger.debug("unable to retrieve master node {}".format(e))
-
-        return None
-
-    async def register_master_node(
-        self, context: Context, node: ApplicationNode
-    ) -> None:
-        logger.info("Add node {} in Consul".format(node.uuid))
-        try:
-            # TODO(safchain) need put the whole context
-            response = await self.consul.kv.put(
-                "bridges/{}/master".format(node.uuid), context.asterisk_id
-            )
-            if response is not True:
-                raise Exception("error")
-        except Exception as e:
-            logger.error("Consul error: {}".format(e))
-
     async def retrieve_asterisk_services(self) -> List[AsteriskService]:
         services: List[AsteriskService] = []
 
         try:
-            _, nodes = await self.consul.health.service("asterisk")
+            _, nodes = await self._consul.health.service("asterisk")
         except Exception as e:
             logger.error("Consul error: {}".format(e))
             return services

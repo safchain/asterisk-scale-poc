@@ -10,7 +10,7 @@ import uuid
 
 from typing import Awaitable, List, Union, Dict
 
-from .resource import ResourceUUID
+from .resources import ResourceUUID, ResourceKeeper
 from .discovery import Discovery
 from .config import Config
 from .context import Context
@@ -49,10 +49,15 @@ RELATED_NODE_UUID_HEADER = "X-Related-Node-UUID"
 class Service:
 
     config: Config
-    api_client: ApiClient
+    rk: ResourceKeeper
+    discovery: Discovery
+    _api_client: ApiClient
 
-    def __init__(self, config: Config, discovery: Discovery) -> None:
+    def __init__(
+        self, config: Config, discovery: Discovery, rk: ResourceKeeper
+    ) -> None:
         self.config = config
+        self.rk = rk
         self.discovery = discovery
 
         configuration = Configuration()
@@ -60,39 +65,55 @@ class Service:
         configuration.username = config.get("api_username")
         configuration.password = config.get("api_password")
 
-        self.api_client = ApiClient(configuration)
+        self._api_client = ApiClient(configuration)
 
     async def get_application(
         self, context: Context, application_uuid: str
     ) -> Application:
-        api = ApplicationsApi(self.api_client)
+        api = ApplicationsApi(self._api_client)
         return await api.applications_application_name_get(
             application_uuid, x_asterisk_id=context.asterisk_id
         )
 
+    async def get_channel(self, context: Context, call_id: str) -> Union[Channel, None]:
+        api = ChannelsApi(self._api_client)
+        try:
+            return await api.channels_channel_id_get(
+                call_id, x_asterisk_id=context.asterisk_id
+            )
+        except ApiException as e:
+            logging.error("Unable to get channel {} : {}".format(call_id, e))
+        return None
+
     async def get_channel_var(
-        self, context: Context, channel: Channel, var: str
+        self, context: Context, channel_id: str, var: str
     ) -> Union[str, None]:
-        api = ChannelsApi(self.api_client)
+        api = ChannelsApi(self._api_client)
         try:
             res = await api.channels_channel_id_variable_get(
-                channel.id, var, x_asterisk_id=context.asterisk_id
+                channel_id, var, x_asterisk_id=context.asterisk_id
             )
             return res.value
         except ApiException as e:
             logging.error(
-                "Unable to get variable to channel {} : {}".format(channel.id, e)
+                "Unable to get variable to channel {} : {}".format(channel_id, e)
             )
         return None
 
     async def set_channel_var(
-        self, context: Context, channel: Channel, var: str, value: str, retry: int = 20,
+        self, context: Context, channel: Channel, var: str, value: str
     ) -> None:
-        api = ChannelsApi(self.api_client)
+        api = ChannelsApi(self._api_client)
+        await api.channels_channel_id_variable_post(
+            channel.id, var, value=value, x_asterisk_id=context.asterisk_id
+        )
+
+    async def set_channel_var_sync(
+        self, context: Context, channel: Channel, var: str, value: str, retry: int = 20
+    ) -> None:
+        api = ChannelsApi(self._api_client)
         try:
-            await api.channels_channel_id_variable_post(
-                channel.id, var, value=value, x_asterisk_id=context.asterisk_id
-            )
+            await self.set_channel_var(context, channel, var, value)
         except ApiException as e:
             logging.error(
                 "Unable to set variable to channel {} : {}".format(channel.id, e)
@@ -118,10 +139,6 @@ class Service:
         self, context: Context, application: Application, channel: Channel
     ) -> ApplicationCall:
         try:
-            # NOTE(safchain) reintroduce if needed
-            # await self.set_channel_var(
-            #    context, channel, "WAZO_USER_OUTGOING_CALL", "true"
-            # )
             return await ApplicationCall.from_channel(context, channel)
         except Exception:
             raise CallCreateException()
@@ -129,7 +146,7 @@ class Service:
     async def call_answer(self, context: Context, call_id: str) -> None:
         logger.info("Answering call {}".format(call_id))
 
-        api = ChannelsApi(self.api_client)
+        api = ChannelsApi(self._api_client)
         try:
             await api.channels_channel_id_answer_post(
                 call_id, x_asterisk_id=context.asterisk_id
@@ -140,7 +157,7 @@ class Service:
     async def insert_call_to_node(
         self, context: Context, node_uuid: str, call_id: str
     ) -> None:
-        api = BridgesApi(self.api_client)
+        api = BridgesApi(self._api_client)
         try:
             bridge = await api.bridges_bridge_id_get(
                 node_uuid, x_asterisk_id=context.asterisk_id
@@ -159,7 +176,7 @@ class Service:
     ) -> ApplicationNode:
         node_uuid = ResourceUUID(application_uuid, node_name)
 
-        api = BridgesApi(self.api_client)
+        api = BridgesApi(self._api_client)
 
         bridge = None
         try:
@@ -189,41 +206,47 @@ class Service:
 
         node = ApplicationNode(uuid=node_uuid, call_ids=full_ids)
 
-        # TODO(safchain) !important, this should be atomic
-        master_context = await self.discovery.retrieve_master_node_context(node)
+        master_context = await self.rk.retrieve_master_node_context(node.uuid)
         if not master_context:
-            await self.discovery.register_master_node(context, node)
+            await self.rk.register_master_node(context, node)
         elif master_context.asterisk_id != context.asterisk_id:
             # TODO(safchain) do not hard code extension
-            await self._mesh(
+            await self._link_master_node(
                 context,
                 application_uuid,
                 master_context.asterisk_id,
                 "6001",
-                {RELATED_NODE_UUID_HEADER: node_uuid},
+                caller_id=node_uuid,
+                variables={RELATED_NODE_UUID_HEADER: node_uuid},
             )
 
         return node
 
-    async def _mesh(
+    async def _link_master_node(
         self,
         context: Context,
         application_uuid: str,
         master_id: str,
         exten: str,
+        caller_id: str = "",
         variables: Dict[str, str] = {},
     ) -> None:
-        logger.info("start meshing")
+        logger.info("start linking asterisk instances")
 
-        # TODO(safchain) check if not already linked
+        # TODO(safchain) check if not already linked, master election ??
         await self._dial_asterisk_id(
-            context, application_uuid, master_id, exten, variables
+            context,
+            application_uuid,
+            master_id,
+            exten,
+            caller_id=caller_id,
+            variables=variables,
         )
 
     async def _join_bridge(
         self, context: Context, bridge_id: str, call_ids: List[str]
     ) -> None:
-        api = BridgesApi(self.api_client)
+        api = BridgesApi(self._api_client)
         try:
             await api.bridges_bridge_id_add_channel_post(
                 bridge_id, call_ids, x_asterisk_id=context.asterisk_id
@@ -237,13 +260,19 @@ class Service:
         application_name: str,
         asterisk_id: str,
         exten: str,
+        caller_id: str = "",
         variables: Dict[str, str] = {},
     ) -> None:
         services = await self.discovery.retrieve_asterisk_services()
         for service in services:
             if asterisk_id == service.id:
                 await self._dial_service_exten(
-                    context, application_name, service, exten, variables
+                    context,
+                    application_name,
+                    service,
+                    exten,
+                    caller_id=caller_id,
+                    variables=variables,
                 )
 
     async def _dial_service_exten(
@@ -252,6 +281,7 @@ class Service:
         application_uuid: str,
         service: AsteriskService,
         exten: str,
+        caller_id: str = "",
         variables: Dict[str, str] = {},
     ) -> None:
         # endpoint = "PJSIP/outgoing/sip:{}:1@{}:{}".format(exten, service.address, service.port)
@@ -259,10 +289,12 @@ class Service:
 
         logger.info("Dialing endpoint %s" % endpoint)
 
-        api = ChannelsApi(self.api_client)
+        api = ChannelsApi(self._api_client)
         await api.channels_post(
             endpoint,
             app=application_uuid,
+            app_args="related",
+            caller_id=caller_id,
             x_asterisk_id=context.asterisk_id,
             containers={"variables": self._normalize_variables(variables)},
         )
@@ -282,6 +314,25 @@ class Service:
         self, context: Context, channel: Channel
     ) -> Union[str, None]:
         return await self.get_channel_var(
-            context, channel, "SIP_HEADER({})".format(RELATED_NODE_UUID_HEADER),
+            context, channel.id, "SIP_HEADER({})".format(RELATED_NODE_UUID_HEADER),
         )
 
+    async def call_hangup(self, context: Context, call_id: str) -> None:
+        logger.info("Hangup call {}".format(call_id))
+
+        api = ChannelsApi(self._api_client)
+        try:
+            await api.channels_channel_id_delete(
+                call_id, x_asterisk_id=context.asterisk_id
+            )
+        except ApiException:
+            raise NoSuchCallException(call_id)
+
+    async def delete_node(self, context: Context, node_uuid: str) -> None:
+        api = BridgesApi(self._api_client)
+        try:
+            await api.bridges_bridge_id_delete(
+                node_uuid, x_asterisk_id=context.asterisk_id
+            )
+        except ApiException:
+            raise NodeJoinException()

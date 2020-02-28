@@ -58,23 +58,23 @@ class Consumer:
 class Bus:
 
     config: Config
-    StasisEvent_cbs: Dict[str, Callable[[Context, StasisEvent, Any], Awaitable[None]]]
-    out_queue: Queue[BaseEvent]
+    _stasis_event_cbs: Dict[str, Callable[[Context, StasisEvent, Any], Awaitable[None]]]
+    _out_queue: Queue[BaseEvent]
 
     def __init__(self, config: Config, reconnect_rate: int = 1) -> None:
         self.config = config
 
-        self.StasisEvent_cbs = dict()
-        self.out_queue = asyncio.Queue()
+        self._stasis_event_cbs = dict()
+        self._out_queue = asyncio.Queue()
 
     async def run(self) -> None:
         logger.info("Start AMQP Bus")
 
         in_queue: Queue[IncomingMessage] = asyncio.Queue()
-        self.out_queue = asyncio.Queue()
+        self._out_queue = asyncio.Queue()
 
         await asyncio.gather(
-            self._reconnector(in_queue, self.out_queue), self._consume_msgs(in_queue)
+            self._reconnector(in_queue, self._out_queue), self._consume_msgs(in_queue)
         )
 
     async def _consume(
@@ -103,7 +103,7 @@ class Bus:
         await self._produce_msgs(connection, exchange, queue)
 
     async def _reconnector(
-        self, in_queue: Queue[IncomingMessage], out_queue: Queue[BaseEvent]
+        self, in_queue: Queue[IncomingMessage], _out_queue: Queue[BaseEvent]
     ) -> None:
         loop = asyncio.get_event_loop()
         try:
@@ -121,7 +121,7 @@ class Bus:
 
                         asyncio.gather(
                             self._consume(connection, in_queue),
-                            self._produce(connection, out_queue),
+                            self._produce(connection, _out_queue),
                         )
                     except asynqp.AMQPError as err:
                         logger.error("Connection error {}".format(err))
@@ -155,15 +155,13 @@ class Bus:
                 queue_msg = await queue.get()
                 queue_msg.ack()
 
+                logger.debug(queue_msg.body)
+
                 try:
                     obj = json.loads(queue_msg.body)
                 except Exception as e:
                     logger.error("Error while decoding AMQP message: {}".format(e))
                     continue
-
-                print("----------------------------------")
-                print(queue_msg.body)
-                print("----------------------------------")
 
                 type = obj.get("type")
                 if not type:
@@ -175,19 +173,18 @@ class Bus:
                     continue
 
                 application_uuid = obj.get("application")
-
-                # fall back
-                if not application_uuid:
-                    channel = obj.get("channel", {})
-                    dialplan = channel.get("dialplan", {})
-                    application_uuid = dialplan.get("app_data")
-
                 if not Application.is_valid_uuid(application_uuid):
                     logger.error("Error not a valid application: {}".format(obj))
                     continue
 
+                channel = obj.get("channel", {})
+                dialplan = channel.get("dialplan", {})
+
+                if dialplan.get("app_name") != "Stasis":
+                    continue
+
                 msg = api.deserialize_obj(obj, "Message")
-                cb = self.StasisEvent_cbs.get(type)
+                cb = self._stasis_event_cbs.get(type)
                 if cb:
                     context = Context(asterisk_id)
                     event = StasisEvent(asterisk_id, application_uuid)
@@ -214,9 +211,9 @@ class Bus:
             pass
 
     def publish(self, event: BaseEvent) -> None:
-        self.out_queue.put_nowait(event)
+        self._out_queue.put_nowait(event)
 
     def on_event(
         self, type: str, cb: Callable[[Context, StasisEvent, Any], Awaitable[None]]
     ) -> None:
-        self.StasisEvent_cbs[type] = cb
+        self._stasis_event_cbs[type] = cb
