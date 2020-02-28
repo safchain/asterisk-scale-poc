@@ -86,13 +86,9 @@ class Discovery:
                 if response is not True:
                     raise Exception("error", "registering service %s" % SERVICE_ID)
 
-                status_url = "http://%s:%d/status" % (
-                    self.config.get("host"),
-                    self.config.get("port"),
-                )
                 response = await self._consul.agent.check.register(
                     SERVICE_ID,
-                    consul.Check.http(status_url, "5s"),
+                    consul.Check.http(self.config.get("healthcheck_url"), "5s"),
                     service_id=SERVICE_ID,
                 )
                 if response is not True:

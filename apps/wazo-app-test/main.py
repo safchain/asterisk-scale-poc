@@ -22,7 +22,6 @@ c = wazo_websocketd_client.Client("localhost", port=9502, token=reply["token"], 
 done = False
 
 def callback(data):
-    print("Coucou")
     print(data)
     call_id = data["call"]["id"]
     app_uuid = data["application_uuid"]

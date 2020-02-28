@@ -1,0 +1,4 @@
+* only one ARI application should be registered for all the apps
+* an application should be able to subscribe to application_uuid event and nothing else
+* should handle mutliple nginx endpoint (HA)
+* should handle multiple consul endpoint (HA)

@@ -21,6 +21,8 @@ class Config(Gila):
         self.set_default("host", "127.0.0.1")
         self.set_default("port", 8000)
 
+        self.set_default("healthcheck_url", "http://172.17.0.1:8000/status")
+
         self.set_default("api_endpoint", "http://localhost:8088")
         self.set_default("api_username", "wazo")
         self.set_default("api_password", "wazo")
