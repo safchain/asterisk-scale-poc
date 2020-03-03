@@ -30,36 +30,54 @@ class APIException(Exception):
         self.resource = resource
 
 
-class CallCreateException(APIException):
+class ChannelCreateException(APIException):
     def __init__(self):
         super().__init__(
-            status_code=404, message="Call create error", error_id="call-create-error",
+            status_code=404,
+            message="Channel create error",
+            error_id="channel-create-error",
         )
 
 
-class NoSuchCallException(APIException):
+class NoSuchChannelException(APIException):
 
     default_status_code: int = 404
 
-    def __init__(self, call_id: str, status_code: Union[int, None] = None) -> None:
+    def __init__(self, channel_id: str, status_code: Union[int, None] = None) -> None:
         status_code = status_code or self.default_status_code
         super().__init__(
             status_code=status_code,
-            message="No such call",
-            error_id="no-such-call",
-            details={"call_id": call_id},
+            message="No such channel",
+            error_id="no-such-channel",
+            details={"channel_id": channel_id},
         )
 
 
-class NodeCreateException(APIException):
+class BridgeCreateException(APIException):
     def __init__(self):
         super().__init__(
-            status_code=404, message="Node create error", error_id="node-create-error",
+            status_code=404,
+            message="Bridge create error",
+            error_id="bridge-create-error",
         )
 
 
-class NodeJoinException(APIException):
+class BridgeJoinException(APIException):
     def __init__(self):
         super().__init__(
-            status_code=404, message="Node join error", error_id="node-join-error",
+            status_code=404, message="Bridge join error", error_id="bridge-join-error",
+        )
+
+
+class NoSuchBridgeException(APIException):
+
+    default_status_code: int = 404
+
+    def __init__(self, bridge_id: str, status_code: Union[int, None] = None) -> None:
+        status_code = status_code or self.default_status_code
+        super().__init__(
+            status_code=status_code,
+            message="No such bridge",
+            error_id="no-such-bridge",
+            details={"bridge_id": bridge_id},
         )

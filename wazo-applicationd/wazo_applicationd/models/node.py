@@ -8,7 +8,6 @@ from typing import List
 from pydantic import BaseModel
 
 
-class ApplicationNode(BaseModel):
+class Node(BaseModel):
 
     uuid: str
-    call_ids: List[str]

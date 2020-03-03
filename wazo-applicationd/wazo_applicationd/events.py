@@ -35,7 +35,6 @@ class BaseEvent:
         self.origin_uuid = config.get("uuid")
         self.required_acl = None
 
-        # NOTE(safchain) with a better way to pass the asterisk id, JWT ???
         self.body = {
             "name": self.name,
             "origin_uuid": self.origin_uuid,

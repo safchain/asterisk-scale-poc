@@ -16,8 +16,7 @@ from .context import Context
 from .resources import ResourceUUID
 
 from .models.application import Application
-from .models.node import ApplicationNode
-from .models.service import AsteriskService
+from .models.service import AsteriskService, Status
 
 logger = logging.getLogger(__name__)
 
@@ -55,20 +54,6 @@ class Discovery:
             )
             if response is not True:
                 raise Exception("error", "registering app {}".format(name))
-
-            # NOTE(safchain) do we need to have a app healthcheck ???
-            """
-            service_id = "apps/{}".format(application.uuid)
-
-            response = await self._consul.agent.service.register(
-                name,
-                service_id=service_id,
-                address=self.config.get("host"),
-                port=self.config.get("port"),
-            )
-            if response is not True:
-                raise Exception("error", "registering service {}".format(name))
-            """
         except Exception as e:
             logger.error("Consul error: {}".format(e))
 
@@ -123,7 +108,13 @@ class Discovery:
                 logger.error("asterisk service definition incomplete")
                 continue
 
-            service = AsteriskService(id=id, address=address, port=port)
+            status = Status.OK
+            for check in node.get("Checks", []):
+                if check.get("Status") != "passing":
+                    status = Status.KO
+                    break
+
+            service = AsteriskService(id=id, address=address, port=port, status=status)
             services.append(service)
 
         return services

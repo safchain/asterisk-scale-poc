@@ -14,6 +14,14 @@ class Context:
 
     asterisk_id: str
 
+    def __eq__(self, other):
+        if isinstance(other, Context):
+            return self.asterisk_id == other.asterisk_id
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def to_token(self, config: Config) -> str:
         payload = {"asterisk_id": self.asterisk_id}
         return jwt.encode(payload, config.get("jwt_secret"), algorithm="HS256").decode()

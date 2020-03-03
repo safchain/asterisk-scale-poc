@@ -38,6 +38,7 @@ def run(config: Config) -> None:
 
     api_task = loop.create_task(api.run())
     bus_task = loop.create_task(bus.run())
+    rk_task = loop.create_task(rk.run())
     discovery_task = loop.create_task(discovery.run())
 
     try:
@@ -45,9 +46,11 @@ def run(config: Config) -> None:
     finally:
         bus_task.cancel()
         discovery_task.cancel()
+        rk_task.cancel()
 
         loop.run_until_complete(bus_task)
         loop.run_until_complete(discovery_task)
+        loop.run_until_complete(rk_task)
 
         loop.close()
 

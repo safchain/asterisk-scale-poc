@@ -177,12 +177,6 @@ class Bus:
                     logger.error("Error not a valid application: {}".format(obj))
                     continue
 
-                channel = obj.get("channel", {})
-                dialplan = channel.get("dialplan", {})
-
-                if dialplan.get("app_name") != "Stasis":
-                    continue
-
                 msg = api.deserialize_obj(obj, "Message")
                 cb = self._stasis_event_cbs.get(type)
                 if cb:
