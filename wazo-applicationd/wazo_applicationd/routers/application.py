@@ -15,7 +15,7 @@ from wazo_applicationd.config import Config
 from wazo_applicationd.discovery import Discovery
 from wazo_applicationd.context import Context
 from wazo_applicationd.service import Service
-from wazo_applicationd.resources import ResourceUUID
+from wazo_applicationd.helpers import ResourceUUID
 
 from wazo_applicationd.models.application import Application
 from wazo_applicationd.models.node import Node

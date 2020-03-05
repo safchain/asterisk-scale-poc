@@ -3,9 +3,8 @@
 
 from __future__ import annotations
 
-import uuid
 import asyncio
-from asyncio import Queue
+from asyncio import Task
 import consul.aio  # type: ignore
 import logging
 from dataclasses import dataclass
@@ -20,21 +19,13 @@ from typing import Any
 
 from .config import Config
 from .context import Context
+from .discovery import Discovery
 
 from .models.application import Application
-from .models.service import AsteriskService
+from .models.service import AsteriskNode
 
 
 logger = logging.getLogger(__name__)
-
-
-RESOURCE_UUID_NAMESPACE = uuid.UUID("bcfcc0df-a4a4-40fb-b760-f25eea31e95d")
-
-
-def ResourceUUID(application: str, value: Union[str, None] = None) -> str:
-    if value:
-        return str(uuid.uuid5(RESOURCE_UUID_NAMESPACE, application + "-" + value))
-    return str(uuid.uuid5(RESOURCE_UUID_NAMESPACE, application))
 
 
 @dataclass
@@ -44,15 +35,15 @@ class ChannelContext:
     context: Context
 
 
-class ResourceKeeper:
+class ResourceManager:
 
     config: Config
     _consul: consul.aoi.Consul
     _ids_to_sessions: Dict[str, str]
-    _watchers: Dict[str, Awaitable[None]]
+    _watchers: Dict[str, Task[Any]]
     _consul_index: int
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, discovery: Discovery) -> None:
         self.config = config
 
         loop = asyncio.get_event_loop()
@@ -67,20 +58,16 @@ class ResourceKeeper:
         self._watchers = {}
         self._consul_index = 0
 
-    async def run(self) -> None:
-        logger.info("Start Resource Keeper")
+        discovery.on_node_ok(self._on_node_ok)
+        discovery.on_node_ko(self._on_node_ko)
 
-        loop = asyncio.get_event_loop()
+    async def _on_node_ok(self, node: AsteriskNode) -> None:
+        print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" + node.id)
 
-        try:
-            loop.run_forever()
-        finally:
-            loop.run_until_complete(loop.shutdown_asyncgens())
-            loop.close()
+    async def _on_node_ko(self, node: AsteriskNode) -> None:
+        print("KKKKKKKKKKKKKKKKKKKKKKKKKKKKKK" + node.id)
 
-    async def _kv_put(
-        self, key: str, value: str, session_name: Union[str, None] = None
-    ) -> None:
+    async def _kv_put(self, key: str, value: str, session_name: str = None) -> None:
         logger.info("Add key %s with value %s", key, value)
 
         try:
@@ -93,7 +80,7 @@ class ResourceKeeper:
             if response is not True:
                 raise Exception("error")
         except Exception as e:
-            logger.error("Consul error: {}".format(e))
+            logger.error("Consul error %s", e)
 
     async def _kv_get(self, key: str) -> Union[str, None]:
         try:
@@ -103,8 +90,7 @@ class ResourceKeeper:
                 return None
             return entry.get("Value").decode()
         except Exception as e:
-            # TODO(safchain) need to better handling errors
-            logger.debug("unable to retrieve master bridge {}".format(e))
+            logger.error("Consul error %s", e)
         return None
 
     async def _kv_get_multi(self, key: str) -> Union[List[Any], None]:
@@ -115,22 +101,19 @@ class ResourceKeeper:
                 return None
             return entries
         except Exception as e:
-            # TODO(safchain) need to better handling errors
-            logger.debug("unable to retrieve master bridge {}".format(e))
+            logger.error("Consul error %s", e)
         return None
 
     async def register_master_bridge(self, context: Context, bridge_id: str) -> None:
         return await self._kv_put(
-            "bridges/{}/master".format(bridge_id), context.asterisk_id, bridge_id
+            "bridges/{}/master".format(bridge_id), context.asterisk_id
         )
 
     async def register_slave_bridge_channel(
         self, context: Context, bridge_id: str, channel_id: str
     ) -> None:
         return await self._kv_put(
-            "bridges/{}/slaves/{}".format(bridge_id, context.asterisk_id),
-            channel_id,
-            session_name=bridge_id,
+            "bridges/{}/slaves/{}".format(bridge_id, context.asterisk_id), channel_id
         )
 
     async def _kv_delete(
@@ -144,14 +127,12 @@ class ResourceKeeper:
             if response is not True:
                 raise Exception("error")
         except Exception as e:
-            logger.error("Consul error: {}".format(e))
+            logger.error("Consul error %s", e)
 
-    async def unregister_master_bridge(self, context: Context, bridge_id: str) -> bool:
+    async def unregister_master_bridge(self, bridge_id: str) -> bool:
         try:
             await self._kv_delete(
-                "bridges/{}/master".format(bridge_id),
-                session_name=bridge_id,
-                recurse=True,
+                "bridges/{}/master".format(bridge_id), recurse=True,
             )
             return True
         except Exception:
@@ -161,15 +142,21 @@ class ResourceKeeper:
         try:
             await self._kv_delete(
                 "bridges/{}/slaves/{}".format(bridge_id, context.asterisk_id),
-                session_name=bridge_id,
                 recurse=True,
             )
             return True
         except Exception:
             return False
 
+    async def unregister_slave_bridge_channel(
+        self, context: Context, bridge_id: str, channel_id: str
+    ) -> None:
+        return await self._kv_delete(
+            "bridges/{}/slaves/{}".format(bridge_id, context.asterisk_id)
+        )
+
     async def retrieve_master_bridge_context(
-        self, context: Context, bridge_id: str
+        self, bridge_id: str
     ) -> Union[Context, None]:
         value = await self._kv_get("bridges/{}/master".format(bridge_id))
         if value:
@@ -184,7 +171,7 @@ class ResourceKeeper:
         )
 
     async def retrieve_slave_bridge_channel_contexts(
-        self, context: Context, bridge_id: str
+        self, bridge_id: str
     ) -> List[ChannelContext]:
         entries = await self._kv_get_multi("bridges/{}/slaves/".format(bridge_id))
         if not entries:
@@ -206,14 +193,22 @@ class ResourceKeeper:
         self,
         watch_id: str,
         key: str,
-        cb: Callable[[str, str], Awaitable[None]],
+        cb: Callable[[str, Union[List[Any], str]], Awaitable[None]],
         recurse=False,
     ) -> None:
         loop = asyncio.get_event_loop()
         self._watchers[watch_id] = loop.create_task(self._watch_key(key, cb))
 
+    def stop_watch_key(self, watch_id: str) -> None:
+        task = self._watchers.get(watch_id)
+        if task:
+            task.cancel()
+
     async def _watch_key(
-        self, key: str, cb: Callable[[str, str], Awaitable[None]], recurse: bool = False
+        self,
+        key: str,
+        cb: Callable[[str, Union[List[Any], str]], Awaitable[None]],
+        recurse: bool = False,
     ) -> None:
         try:
             while True:
@@ -225,21 +220,18 @@ class ResourceKeeper:
                     )
 
                     i, entry = await self._consul.kv.get(
-                        key, wait="5s", index=self._consul_index, recurse=recurse
+                        key, wait="30s", index=self._consul_index, recurse=recurse
                     )
                     index = int(i)
 
-                    print("ooooooooooooooooooooooooooooo")
-                    print(key)
-                    print(index)
-                    print(entry)
-
                     if entry and index != self._consul_index:
-                        await cb(key, entry["Value"].decode())
+                        if recurse:
+                            await cb(key, entry["Value"].decode())
+                        else:
+                            await cb(key, entry)
 
                     self._consul_index = index
                 except Exception as e:
-                    # TODO(safchain) need to better handling errors
-                    logger.debug("unable to retrieve master bridge {}".format(e))
+                    logger.error("Consul error %s", e)
         except asyncio.CancelledError:
             pass

@@ -13,7 +13,7 @@ class Status(str, Enum):
     KO = "ko"
 
 
-class AsteriskService(BaseModel):
+class AsteriskNode(BaseModel):
 
     id: str
     address: str

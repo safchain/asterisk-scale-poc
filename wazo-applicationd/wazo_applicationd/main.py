@@ -17,19 +17,19 @@ from .api import API
 from .discovery import Discovery
 from .stasis import Stasis
 from .service import Service
-from .resources import ResourceKeeper
-
-from wazo_appgateway_client.models import Message  # type: ignore
+from .resources import ResourceManager
+from .leader import LeaderManager
 
 logger = logging.getLogger(__name__)
 
 
 def run(config: Config) -> None:
-    discovery = Discovery(config)
+    leader = LeaderManager(config)
+    discovery = Discovery(config, leader)
     bus = Bus(config)
-    rk = ResourceKeeper(config)
-    service = Service(config, discovery, rk)
-    stasis = Stasis(config, bus, service, discovery, rk)
+    rm = ResourceManager(config, discovery)
+    service = Service(config, discovery)
+    stasis = Stasis(config, bus, service, discovery, rm)
     api = API(config, discovery, service)
 
     stasis.subscribe_events()
@@ -38,7 +38,6 @@ def run(config: Config) -> None:
 
     api_task = loop.create_task(api.run())
     bus_task = loop.create_task(bus.run())
-    rk_task = loop.create_task(rk.run())
     discovery_task = loop.create_task(discovery.run())
 
     try:
@@ -46,11 +45,9 @@ def run(config: Config) -> None:
     finally:
         bus_task.cancel()
         discovery_task.cancel()
-        rk_task.cancel()
 
         loop.run_until_complete(bus_task)
         loop.run_until_complete(discovery_task)
-        loop.run_until_complete(rk_task)
 
         loop.close()
 

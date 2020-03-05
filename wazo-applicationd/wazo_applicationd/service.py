@@ -10,7 +10,6 @@ import uuid
 
 from typing import Awaitable, List, Union, Dict
 
-from .resources import ResourceUUID, ResourceKeeper
 from .discovery import Discovery
 from .config import Config
 from .context import Context
@@ -22,7 +21,7 @@ from .exceptions import (
     NoSuchBridgeException,
 )
 
-from .models.service import AsteriskService
+from .models.service import AsteriskNode
 
 from wazo_appgateway_client import (  # type: ignore
     Configuration,
@@ -46,15 +45,12 @@ logger = logging.getLogger(__name__)
 class Service:
 
     config: Config
-    rk: ResourceKeeper
     discovery: Discovery
     _api_client: ApiClient
 
     def __init__(
-        self, config: Config, discovery: Discovery, rk: ResourceKeeper
-    ) -> None:
+        self, config: Config, discovery: Discovery) -> None:
         self.config = config
-        self.rk = rk
         self.discovery = discovery
 
         configuration = Configuration()
@@ -213,10 +209,10 @@ class Service:
         variables: Dict[str, str] = {},
         args: str = "",
     ) -> Channel:
-        services = await self.discovery.retrieve_asterisk_services()
-        for service in services:
+        services = await self.discovery.retrieve_asterisk_nodes()
+        for _, service in services.items():
             if asterisk_id == service.id:
-                return await self._dial_service_exten(
+                return await self._dial_node_exten(
                     context,
                     application_uuid,
                     service,
@@ -226,19 +222,19 @@ class Service:
                     args=args,
                 )
 
-    async def _dial_service_exten(
+    async def _dial_node_exten(
         self,
         context: Context,
         application_uuid: str,
-        service: AsteriskService,
+        node: AsteriskNode,
         exten: str,
         caller_id: str = "",
         variables: Dict[str, str] = {},
         args: str = "",
     ) -> Channel:
-        endpoint = "SIP/%s:%s/%s" % (service.address, service.port, exten)
+        endpoint = "SIP/{}:{}/{}".format(node.address, node.port, exten)
 
-        logger.debug("Dialing endpoint %s" % endpoint)
+        logger.debug("Dialing endpoint %s", endpoint)
 
         api = ChannelsApi(self._api_client)
         return await api.channels_post(
