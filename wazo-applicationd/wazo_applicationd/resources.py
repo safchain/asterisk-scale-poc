@@ -9,6 +9,7 @@ import consul.aio  # type: ignore
 import logging
 from dataclasses import dataclass
 import os
+from datetime import datetime
 
 from typing import Union
 from typing import Dict
@@ -29,6 +30,10 @@ from . import helpers
 logger = logging.getLogger(__name__)
 
 
+SESSION_RESOURCE_TIMEOUT = 3600  # will create a new session every N seconds
+SESSION_RESOURCE_TTL = 3600 * 6  # each session will be released everty N seconds
+
+
 @dataclass
 class ChannelContext:
 
@@ -42,6 +47,8 @@ class ResourceManager:
     _consul: consul.aoi.Consul
     _watchers: Dict[str, Task[Any]]
     _consul_sessions: Dict[str, str]
+    _session_resource: str
+    _session_resource_time: datetime
 
     def __init__(self, config: Config, discovery: Discovery) -> None:
         self.config = config
@@ -56,6 +63,7 @@ class ResourceManager:
 
         self._watchers = {}
         self._consul_sessions = {}
+        self._session_resource = ""
 
         discovery.on_node_ok(self._on_node_ok)
         discovery.on_node_ko(self._on_node_ko)
@@ -71,7 +79,11 @@ class ResourceManager:
 
     async def _get_or_create_session(
         self, name: str, checks: List[str] = None
-    ) -> Union[int, None]:
+    ) -> Union[str, None]:
+        session = self._consul_sessions.get(name)
+        if session:
+            return session
+
         try:
             session = await self._consul.session.create(name=name, checks=checks)
             if not session:
@@ -83,7 +95,7 @@ class ResourceManager:
             logger.error("Consul: %s", e)
         return None
 
-    async def _kv_put(self, key: str, value: str, session: int = None) -> bool:
+    async def _kv_put(self, key: str, value: str, session: str = None) -> bool:
         logger.info("Add key %s with value %s", key, value)
 
         try:
@@ -220,14 +232,31 @@ class ResourceManager:
         return ch_contexts
 
     async def index_resource_id_context(self, context: Context, key: str) -> bool:
-        session = await self._get_or_create_session(
-            self._asterisk_session_name(context), [helpers.asterisk_check_id(context)]
-        )
-        if not session:
-            return False
+        if (
+            not self._session_resource
+            or (datetime.now() - self._session_resource_time).total_seconds()
+            > SESSION_RESOURCE_TIMEOUT
+        ):
+            name = self._asterisk_session_name(context)
+
+            try:
+                session = await self._consul.session.create(
+                    name=name, checks=[helpers.asterisk_check_id(context)]
+                )
+                if not session:
+                    raise Exception("unable to create {} session".format(name))
+                self._session_resource = session
+                self._session_resource_time = datetime.now()
+            except:
+                raise Exception("unable to create {} session".format(name))
+
+        if not self._session_resource:
+            raise Exception("no session available")
 
         return await self._kv_put(
-            "resources/{}".format(key), context.asterisk_id, session=session
+            "resources/{}".format(key),
+            context.asterisk_id,
+            session=self._session_resource,
         )
 
     async def delete_resource_id_context(self, key: str) -> None:

@@ -141,14 +141,6 @@ class Stasis:
             ):
         """
 
-    async def _eheh(self, key: str, value: Union[List[Any], str]) -> None:
-        print("ZZZZZZZZZZZZZZZZZZZZZZ")
-        print(key)
-        print(value)
-
-    async def _hoho(self, key: str) -> None:
-        print("IIIIIIIIIIIIIIIIIIIIIIIII")
-
     async def on_channel_entered_bridge(
         self,
         context: Context,
@@ -157,16 +149,9 @@ class Stasis:
     ) -> None:
         bridge_id = channel_entered.bridge.id
 
-        # register this asterisk as master if no master already registered
+        # NOTE(safchain) this block get/set is probably racy, maybe need to use a transaction ?
         master_context = await self.rm.retrieve_master_bridge_context(bridge_id)
         if not master_context:
-            self.rm.watch_key(
-                "master",
-                "bridges/{}/master".format(channel_entered.bridge.id),
-                on_create=self._eheh,
-                on_delete=self._hoho
-            )
-
             await self.rm.register_master_bridge(context, channel_entered.bridge.id)
         elif master_context != context:
             # call the master asterisk if not already done
