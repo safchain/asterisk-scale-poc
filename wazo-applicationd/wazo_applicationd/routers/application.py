@@ -48,7 +48,7 @@ async def call_answer(
 
 
 @router.post("/applications/{application_uuid}/nodes/{node_name}", response_model=Node)
-async def create_bridge_with_calls(
+async def create_node_with_calls(
     application_uuid: str,
     node_name: str,
     call_ids: List[str],
