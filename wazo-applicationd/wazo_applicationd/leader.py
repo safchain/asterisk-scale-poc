@@ -83,15 +83,16 @@ class LeaderManager:
 
                 is_success: bool = False
                 try:
-                    # renew the session
                     if not session:
                         session = await self._consul.session.create(
                             name=key, behavior="delete", checks=checks, ttl=ttl
                         )
+                    else:
+                        session = await self._consul.session.renew(session)
 
                     is_success = await self._consul.kv.put(key, key, acquire=session)
                 except Exception as e:
-                    logger.error("Consul: %s", e)
+                    session = ""
                     await asyncio.sleep(1)
                     continue
 

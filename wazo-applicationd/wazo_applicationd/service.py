@@ -13,6 +13,7 @@ from typing import Awaitable, List, Union, Dict
 from .discovery import Discovery
 from .config import Config
 from .context import Context
+from .resources import ResourceManager
 from .exceptions import (
     ChannelCreateException,
     NoSuchChannelException,
@@ -46,11 +47,15 @@ class Service:
 
     config: Config
     discovery: Discovery
+    rm: ResourceManager
     _api_client: ApiClient
 
-    def __init__(self, config: Config, discovery: Discovery) -> None:
+    def __init__(
+        self, config: Config, discovery: Discovery, rm: ResourceManager
+    ) -> None:
         self.config = config
         self.discovery = discovery
+        self.rm = rm
 
         configuration = Configuration()
         configuration.host = "%s/ari" % config.get("api_endpoint")
@@ -153,13 +158,33 @@ class Service:
             pass
 
     async def create_bridge_with_channels(
-        self,
-        context: Context,
-        application_uuid: str,
-        bridge_id: str,
-        channel_ids: List[str],
+        self, bridge_id: str, channel_ids: List[str]
     ) -> str:
+        ast_channels: Dict[str, List[str]] = {}
+        for channel_id in channel_ids:
+            context = await Context.from_resource_id(self.config, channel_id)
+            if not context:
+                raise NoSuchChannelException(channel_id)
+
+            id_list = ast_channels.get(context.asterisk_id)
+            if id_list:
+                id_list.append(channel_id)
+            else:
+                ast_channels[context.asterisk_id] = [channel_id]
+
+        for asterisk_id, id_list in ast_channels.items():
+            context = Context(asterisk_id=asterisk_id)
+            await self._create_bridge_with_channels(context, bridge_id, id_list)
+
+        return bridge_id
+
+    async def _create_bridge_with_channels(
+        self, context: Context, bridge_id: str, channel_ids: List[str],
+    ) -> None:
         api = BridgesApi(self._api_client)
+
+        if not channel_ids:
+            raise BridgeCreateException()
 
         bridge = None
         try:
@@ -183,8 +208,6 @@ class Service:
         add_ids = set(channel_ids) - curr_ids
 
         await self._join_bridge(context, bridge.id, list(add_ids))
-
-        return bridge_id
 
     async def _join_bridge(
         self, context: Context, bridge_id: str, channel_ids: List[str]

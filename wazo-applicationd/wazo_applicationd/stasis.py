@@ -209,7 +209,7 @@ class Stasis:
     async def on_stasis_start(
         self, context: Context, event: StasisEvent, stasis_start: StasisStart
     ) -> None:
-        self.rm.index_resource_id_context(context, stasis_start.channel.id)
+        await self.rm.index_resource_id_context(context, stasis_start.channel.id)
 
         if stasis_start.args:
             # if related(cross asterisk call) push the call to the bridge
@@ -244,7 +244,7 @@ class Stasis:
     async def on_stasis_end(
         self, context: Context, event: StasisEvent, stasis_end: StasisEnd
     ) -> None:
-        self.rm.delete_resource_id_context(stasis_end.channel.id)
+        await self.rm.delete_resource_id_context(stasis_end.channel.id)
 
     async def _start_user_outgoing_call(
         self, context: Context, application_uuid: str, stasis_start: StasisStart,

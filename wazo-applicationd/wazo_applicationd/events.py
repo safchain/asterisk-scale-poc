@@ -39,7 +39,8 @@ class BaseEvent:
             "name": self.name,
             "origin_uuid": self.origin_uuid,
             "data": {
-                "context_token": context.to_token(config),
+                # NOTE(safchain) not useful anymore as now use KV
+                # "context_token": context.to_token(config),
                 "application_uuid": self.application_uuid,
             },
         }

@@ -40,11 +40,10 @@ async def register_application(
 async def call_answer(
     application_uuid: str,
     call_id: str,
-    x_context_token: str = Header(None),
     config: Config = Depends(get_config),
     service: Service = Depends(get_service),
 ) -> None:
-    context = Context.from_token(config, x_context_token)
+    context = await Context.from_resource_id(config, call_id)
     await service.channel_answer(context, call_id)
 
 
@@ -53,15 +52,11 @@ async def create_bridge_with_calls(
     application_uuid: str,
     node_name: str,
     call_ids: List[str],
-    x_context_token: str = Header(None),
     config: Config = Depends(get_config),
     service: Service = Depends(get_service),
 ) -> Node:
-    context = Context.from_token(config, x_context_token)
     bridge_id = helpers.resource_uuid(application_uuid, node_name)
-    await service.create_bridge_with_channels(
-        context, application_uuid, bridge_id, call_ids
-    )
+    await service.create_bridge_with_channels(bridge_id, call_ids)
     return Node(uuid=bridge_id)
 
 
@@ -74,6 +69,7 @@ async def mute_call(
 ):
     pass
 
+
 @router.post("/applications/{application_uuid}/calls/{call_id}/mute/stop")
 async def mute_call(
     application_uuid: str,
@@ -83,8 +79,9 @@ async def mute_call(
 ):
     pass
 
+
 @router.delete("/applications/{application_uuid}/calls/{call_id}")
-async def call_answer(
+async def call_hangup(
     application_uuid: str,
     call_id: str,
     x_context_token: str = Header(None),
@@ -92,6 +89,4 @@ async def call_answer(
     service: Service = Depends(get_service),
 ) -> None:
     pass
-
-
 

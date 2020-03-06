@@ -34,7 +34,6 @@ class Discovery:
     config: Config
     leader: LeaderManager
     _consul: consul.aoi.Consul
-    _consul_index: int
     _ast_nodes_watcher_task: Union[Task[Any], None]
     _node_ok_cbs: List[Callable[[AsteriskNode], Awaitable[None]]]
     _node_ko_cbs: List[Callable[[AsteriskNode], Awaitable[None]]]
@@ -51,7 +50,6 @@ class Discovery:
             loop=loop,
         )
 
-        self._consul_index = 0
         self._ast_nodes_watcher_task = None
         self._node_ok_cbs = []
         self._node_ko_cbs = []
@@ -145,8 +143,7 @@ class Discovery:
         ast_nodes: Dict[str, AsteriskNode] = {}
 
         try:
-            index, nodes = await self._consul.health.service("asterisk")
-            self._consul_index = int(index)
+            _, nodes = await self._consul.health.service("asterisk")
         except Exception as e:
             logger.error("Consul: %s", e)
             return ast_nodes
@@ -182,18 +179,21 @@ class Discovery:
                     for cb in self._node_ko_cbs:
                         await cb(ast_node_)
 
+            i, _ = await self._consul.health.service("asterisk")
+            prev_index = int(i)
+
             while True:
                 try:
                     logger.debug(
-                        "Check changes on asterisk nodes index %d", self._consul_index,
+                        "Check changes on asterisk nodes index %d", prev_index,
                     )
 
                     i, nodes = await self._consul.health.service(
-                        "asterisk", wait="30s", index=self._consul_index
+                        "asterisk", wait="30s", index=prev_index
                     )
                     index = int(i)
 
-                    if nodes and index != self._consul_index:
+                    if nodes and index != prev_index:
                         for node in nodes:
                             ast_node = self._to_asterisk_node(node)
                             if not ast_node:
@@ -215,7 +215,7 @@ class Discovery:
 
                             ast_nodes[ast_node.id] = ast_node
 
-                    self._consul_index = index
+                    prev_index = index
                 except Exception as e:
                     logger.error("unable to get node states %s", e)
         except asyncio.CancelledError:

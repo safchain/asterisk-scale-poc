@@ -28,7 +28,7 @@ def run(config: Config) -> None:
     discovery = Discovery(config, leader)
     bus = Bus(config)
     rm = ResourceManager(config, discovery)
-    service = Service(config, discovery)
+    service = Service(config, discovery, rm)
     stasis = Stasis(config, bus, service, discovery, rm)
     api = API(config, discovery, service)
 

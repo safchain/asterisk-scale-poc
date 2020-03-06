@@ -41,7 +41,6 @@ class ResourceManager:
     config: Config
     _consul: consul.aoi.Consul
     _watchers: Dict[str, Task[Any]]
-    _consul_index: int
     _consul_sessions: Dict[str, str]
 
     def __init__(self, config: Config, discovery: Discovery) -> None:
@@ -56,7 +55,6 @@ class ResourceManager:
         )
 
         self._watchers = {}
-        self._consul_index = 0
         self._consul_sessions = {}
 
         discovery.on_node_ok(self._on_node_ok)
@@ -100,8 +98,7 @@ class ResourceManager:
 
     async def _kv_get(self, key: str) -> Union[str, None]:
         try:
-            index, entry = await self._consul.kv.get(key)
-            self._consul_index = int(index)
+            _, entry = await self._consul.kv.get(key)
             if not entry:
                 return None
             return entry.get("Value").decode()
@@ -111,8 +108,7 @@ class ResourceManager:
 
     async def _kv_get_multi(self, key: str) -> Union[List[Any], None]:
         try:
-            index, entries = await self._consul.kv.get(key, recurse=True)
-            self._consul_index = int(index)
+            _, entries = await self._consul.kv.get(key, recurse=True)
             if not entries:
                 return None
             return entries
@@ -234,12 +230,6 @@ class ResourceManager:
             "resources/{}".format(key), context.asterisk_id, session=session
         )
 
-    async def context_from_resource_id(self, key: str) -> Union[Context, None]:
-        asterisk_id = await self._kv_get("resources/{}".format(key))
-        if not asterisk_id:
-            return None
-        return Context(asterisk_id=asterisk_id)
-
     async def delete_resource_id_context(self, key: str) -> None:
         await self._kv_delete("resources/{}".format(key))
 
@@ -269,20 +259,21 @@ class ResourceManager:
         on_delete: Callable[[str], Awaitable[None]] = None,
     ) -> None:
         try:
+            i, _ = await self._consul.kv.get(key)
+            prev_index = int(i)
+
             while True:
                 try:
                     logger.debug(
-                        "Check changes for on key %s with index %d",
-                        key,
-                        self._consul_index,
+                        "Check changes for on key %s with index %d", key, prev_index,
                     )
 
                     i, entry = await self._consul.kv.get(
-                        key, wait="30s", index=self._consul_index
+                        key, wait="30s", index=prev_index
                     )
                     index = int(i)
 
-                    if index != self._consul_index:
+                    if index != prev_index:
                         if entry:
                             if entry["CreateIndex"] == entry["ModifyIndex"]:
                                 if on_create:
@@ -293,7 +284,7 @@ class ResourceManager:
                             if on_delete:
                                 await on_delete(key)
 
-                    self._consul_index = index
+                    prev_index = index
                 except Exception as e:
                     logger.error("Consul: %s", e)
         except asyncio.CancelledError:
