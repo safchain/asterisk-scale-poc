@@ -144,6 +144,28 @@ class Service:
         except ApiException:
             raise NoSuchChannelException(channel_id)
 
+    async def channel_mute_start(self, context: Context, channel_id: str) -> None:
+        logger.info("Answering channel {}".format(channel_id))
+
+        api = ChannelsApi(self._api_client)
+        try:
+            await api.channels_channel_id_mute_post(
+                channel_id, x_asterisk_id=context.asterisk_id
+            )
+        except ApiException:
+            raise NoSuchChannelException(channel_id)
+
+    async def channel_mute_stop(self, context: Context, channel_id: str) -> None:
+        logger.info("Answering channel {}".format(channel_id))
+
+        api = ChannelsApi(self._api_client)
+        try:
+            await api.channels_channel_id_mute_delete(
+                channel_id, x_asterisk_id=context.asterisk_id
+            )
+        except ApiException:
+            raise NoSuchChannelException(channel_id)
+
     async def insert_channel_in_bridge(
         self, context: Context, bridge_id: str, channel_id: str
     ) -> None:

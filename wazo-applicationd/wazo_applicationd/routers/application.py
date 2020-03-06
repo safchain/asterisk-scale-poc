@@ -61,23 +61,25 @@ async def create_node_with_calls(
 
 
 @router.post("/applications/{application_uuid}/calls/{call_id}/mute/start")
-async def mute_call(
+async def call_mute_start(
     application_uuid: str,
     call_id: str,
     config: Config = Depends(get_config),
     service: Service = Depends(get_service),
 ):
-    pass
+    context = await Context.from_resource_id(config, call_id)
+    await service.channel_mute_start(context, call_id)
 
 
 @router.post("/applications/{application_uuid}/calls/{call_id}/mute/stop")
-async def mute_call(
+async def call_mute_stop(
     application_uuid: str,
     call_id: str,
     config: Config = Depends(get_config),
     service: Service = Depends(get_service),
 ):
-    pass
+    context = await Context.from_resource_id(config, call_id)
+    await service.channel_mute_stop(context, call_id)
 
 
 @router.delete("/applications/{application_uuid}/calls/{call_id}")
@@ -88,5 +90,6 @@ async def call_hangup(
     config: Config = Depends(get_config),
     service: Service = Depends(get_service),
 ) -> None:
-    pass
+    context = await Context.from_resource_id(config, call_id)
+    await service.channel_hangup(context, call_id)
 
