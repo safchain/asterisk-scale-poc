@@ -48,8 +48,7 @@ class Service:
     discovery: Discovery
     _api_client: ApiClient
 
-    def __init__(
-        self, config: Config, discovery: Discovery) -> None:
+    def __init__(self, config: Config, discovery: Discovery) -> None:
         self.config = config
         self.discovery = discovery
 
@@ -114,7 +113,6 @@ class Service:
                 "Unable to set variable to channel {} : {}".format(channel.id, e)
             )
 
-        # TODO remove this when Asterisk gets fixed to set var synchronously
         for _ in range(retry + 1):
             try:
                 res = await api.channels_channel_id_variable_get(

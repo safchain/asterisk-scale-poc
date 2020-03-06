@@ -78,6 +78,8 @@ class Stasis:
         # meaning no slave neither
         if not master_context or master_context != context:
             await self.rm.unregister_slave_bridge(context, bridge_destroyed.bridge.id)
+        else:
+            await self.rm.unregister_master_bridge(context, bridge_destroyed.bridge.id)
 
     """
     async def _promote_new_master_bridge(
@@ -144,6 +146,9 @@ class Stasis:
         print(key)
         print(value)
 
+    async def _hoho(self, key: str) -> None:
+        print("IIIIIIIIIIIIIIIIIIIIIIIII")
+
     async def on_channel_entered_bridge(
         self,
         context: Context,
@@ -158,10 +163,8 @@ class Stasis:
             self.rm.watch_key(
                 "master",
                 "bridges/{}/master".format(channel_entered.bridge.id),
-                self._eheh,
-            )
-            self.rm.watch_key(
-                "master", "bridges/{}/".format(channel_entered.bridge.id), self._eheh
+                on_create=self._eheh,
+                on_delete=self._hoho
             )
 
             await self.rm.register_master_bridge(context, channel_entered.bridge.id)
@@ -206,6 +209,8 @@ class Stasis:
     async def on_stasis_start(
         self, context: Context, event: StasisEvent, stasis_start: StasisStart
     ) -> None:
+        self.rm.index_resource_id_context(context, stasis_start.channel.id)
+
         if stasis_start.args:
             # if related(cross asterisk call) push the call to the bridge
             command, bridge_id = stasis_start.args
@@ -239,7 +244,7 @@ class Stasis:
     async def on_stasis_end(
         self, context: Context, event: StasisEvent, stasis_end: StasisEnd
     ) -> None:
-        pass
+        self.rm.delete_resource_id_context(stasis_end.channel.id)
 
     async def _start_user_outgoing_call(
         self, context: Context, application_uuid: str, stasis_start: StasisStart,

@@ -40,7 +40,7 @@ class API:
 
         self._app = FastAPI(
             title="Wazo applicationd",
-            description="Applicationd blah blah",
+            description="Applicationd",
             version="0.1.0",
         )
 
@@ -81,7 +81,7 @@ class API:
             config = uvicorn.Config(
                 self._app,
                 host="0.0.0.0",
-                port=self.config.get("port"),
+                port=int(self.config.get("port")),
                 log_level=log_level,
             )
 

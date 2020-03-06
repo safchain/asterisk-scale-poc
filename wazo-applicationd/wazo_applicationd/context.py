@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import jwt
+import asyncio
 from dataclasses import dataclass
 
 
 from .config import Config
+from .resources import ResourceManager
+
 
 @dataclass
 class Context:
@@ -29,8 +32,16 @@ class Context:
     @staticmethod
     def from_token(config: Config, token: str) -> Context:
         payload = jwt.decode(token, config.get("jwt_secret"), algorithm="HS256")
-        asterisk_id = payload.get("asterisk_id")
-        if not asterisk_id:
-            raise Exception("not a valid context")
+        asterisk_id = payload.get("asterisk_id", "")
+        return Context(asterisk_id=asterisk_id)
 
-        return Context(asterisk_id)
+    @staticmethod
+    def from_resource_id(rm: ResourceManager, key: str) -> Context:
+        # NOTE(safchain) should we not return the JWT to the user as a UUID
+        # containing the asterisk_id and the resource ID ? This will avoid resource IDs leak
+        # in the KV.
+        context = asyncio.run(rm.context_from_resource_id(key))
+        if context:
+            return context
+
+        return Context(asterisk_id="")

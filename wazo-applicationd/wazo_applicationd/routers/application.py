@@ -15,7 +15,7 @@ from wazo_applicationd.config import Config
 from wazo_applicationd.discovery import Discovery
 from wazo_applicationd.context import Context
 from wazo_applicationd.service import Service
-from wazo_applicationd.helpers import ResourceUUID
+from wazo_applicationd import helpers
 
 from wazo_applicationd.models.application import Application
 from wazo_applicationd.models.node import Node
@@ -58,9 +58,40 @@ async def create_bridge_with_calls(
     service: Service = Depends(get_service),
 ) -> Node:
     context = Context.from_token(config, x_context_token)
-    bridge_id = ResourceUUID(application_uuid, node_name)
+    bridge_id = helpers.resource_uuid(application_uuid, node_name)
     await service.create_bridge_with_channels(
         context, application_uuid, bridge_id, call_ids
     )
     return Node(uuid=bridge_id)
+
+
+@router.post("/applications/{application_uuid}/calls/{call_id}/mute/start")
+async def mute_call(
+    application_uuid: str,
+    call_id: str,
+    config: Config = Depends(get_config),
+    service: Service = Depends(get_service),
+):
+    pass
+
+@router.post("/applications/{application_uuid}/calls/{call_id}/mute/stop")
+async def mute_call(
+    application_uuid: str,
+    call_id: str,
+    config: Config = Depends(get_config),
+    service: Service = Depends(get_service),
+):
+    pass
+
+@router.delete("/applications/{application_uuid}/calls/{call_id}")
+async def call_answer(
+    application_uuid: str,
+    call_id: str,
+    x_context_token: str = Header(None),
+    config: Config = Depends(get_config),
+    service: Service = Depends(get_service),
+) -> None:
+    pass
+
+
 

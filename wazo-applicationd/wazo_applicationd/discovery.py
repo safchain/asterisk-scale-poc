@@ -18,10 +18,11 @@ from typing import Callable
 from .config import Config
 from .context import Context
 from .leader import LeaderManager
-from .helpers import ResourceUUID
 
 from .models.application import Application
 from .models.service import AsteriskNode, Status
+
+from . import helpers
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class Discovery:
 
         self._consul = consul.aio.Consul(
             host=self.config.get("consul_host"),
-            port=self.config.get("consul_port"),
+            port=int(self.config.get("consul_port")),
             loop=loop,
         )
 
@@ -68,7 +69,7 @@ class Discovery:
         await self._register_service()
 
     async def register_application(self, name: str) -> Application:
-        application = Application(uuid=ResourceUUID(name))
+        application = Application(uuid=helpers.resource_uuid(name))
         application_uuid = application.uuid
 
         logger.info("Registering application {} in Consul".format(name))
@@ -77,9 +78,9 @@ class Discovery:
                 "applications/{}".format(application_uuid), application_uuid
             )
             if response is not True:
-                raise Exception("error", "registering app {}".format(name))
+                raise Exception("registering app {}".format(name))
         except Exception as e:
-            logger.error("Consul error: {}".format(e))
+            logger.error("Consul: %s", e)
 
         return application
 
@@ -94,10 +95,10 @@ class Discovery:
                     SERVICE_ID,
                     service_id=uuid,
                     address=self.config.get("host"),
-                    port=self.config.get("port"),
+                    port=int(self.config.get("port")),
                 )
                 if response is not True:
-                    raise Exception("error", "registering service node %s" % uuid)
+                    raise Exception("registering service node {}".format(uuid))
 
                 response = await self._consul.agent.check.register(
                     self._http_node_check_id(),
@@ -105,15 +106,15 @@ class Discovery:
                     service_id=uuid,
                 )
                 if response is not True:
-                    raise Exception("error", "registering node check %s" % uuid)
+                    raise Exception("registering node check {}".format(uuid))
 
-                logger.info("Node %s registered in Consul" % uuid)
+                logger.info("Node %s registered in Consul", uuid)
 
                 return None
             except asyncio.CancelledError:
                 return
             except Exception as e:
-                logger.error("Consul error: %s", e)
+                logger.error("Consul: %s", e)
 
             await asyncio.sleep(5)
 
@@ -136,7 +137,7 @@ class Discovery:
 
         status = Status.OK if self._is_node_checks_passing(node) else Status.KO
 
-        return AsteriskNode(id=id, address=address, port=port, status=status)
+        return AsteriskNode(id=id, address=address, port=int(port), status=status)
 
     async def retrieve_asterisk_nodes(
         self, filter_status: str = None
@@ -147,7 +148,7 @@ class Discovery:
             index, nodes = await self._consul.health.service("asterisk")
             self._consul_index = int(index)
         except Exception as e:
-            logger.error("Consul error: {}".format(e))
+            logger.error("Consul: %s", e)
             return ast_nodes
 
         for node in nodes:

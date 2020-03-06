@@ -6,7 +6,6 @@ from __future__ import annotations
 import asyncio
 from asyncio import Task
 import consul.aio  # type: ignore
-import consul.base  # type: ignore
 import logging
 
 from typing import Any
@@ -17,7 +16,6 @@ from typing import Callable
 from typing import Awaitable
 
 from .config import Config
-from .context import Context
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +34,7 @@ class LeaderManager:
 
         self._consul = consul.aio.Consul(
             host=self.config.get("consul_host"),
-            port=self.config.get("consul_port"),
+            port=int(self.config.get("consul_port")),
             loop=loop,
         )
 
@@ -58,6 +56,11 @@ class LeaderManager:
             self._start_election(key, on_master, on_slave, checks=checks)
         )
 
+    async def stop_election(self, key: str) -> None:
+        task = self._elections.pop(key, None)
+        if task:
+            task.cancel()
+
     async def _start_election(
         self,
         key: str,
@@ -68,6 +71,7 @@ class LeaderManager:
         is_master: bool = False
         is_first_pass: bool = True
         session: str = ""
+        ttl: int = 20
 
         try:
             while True:
@@ -82,12 +86,12 @@ class LeaderManager:
                     # renew the session
                     if not session:
                         session = await self._consul.session.create(
-                            name=key, behavior="delete", checks=checks
+                            name=key, behavior="delete", checks=checks, ttl=ttl
                         )
 
                     is_success = await self._consul.kv.put(key, key, acquire=session)
                 except Exception as e:
-                    logger.error("Consul error %s", e)
+                    logger.error("Consul: %s", e)
                     await asyncio.sleep(1)
                     continue
 
@@ -110,7 +114,7 @@ class LeaderManager:
 
                 is_first_pass = False
 
-                await self._wait_for_key_update(key, 10)
+                await self._wait_for_key_update(key, int(ttl / 2))
         except asyncio.CancelledError:
             pass
         except Exception as e:

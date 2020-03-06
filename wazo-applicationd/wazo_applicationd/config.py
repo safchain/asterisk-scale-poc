@@ -19,7 +19,7 @@ class Config(Gila):
         self.set_default("uuid", "1223456789")
 
         self.set_default("host", "127.0.0.1")
-        self.set_default("port", 8000)
+        self.set_default("port", "8000")
 
         self.set_default("healthcheck_url", "http://172.17.0.1:8000/status")
 
@@ -28,7 +28,7 @@ class Config(Gila):
         self.set_default("api_password", "wazo")
 
         self.set_default("amqp_host", "127.0.0.1")
-        self.set_default("amqp_port", 5672)
+        self.set_default("amqp_port", "5672")
         self.set_default("amqp_username", "guest")
         self.set_default("amqp_password", "guest")
         self.set_default("amqp_exchange", "wazo")
@@ -36,7 +36,7 @@ class Config(Gila):
         self.set_default("amqp_reconnection_rate", 1)
 
         self.set_default("consul_host", "127.0.0.1")
-        self.set_default("consul_port", 8500)
+        self.set_default("consul_port", "8500")
 
         self.set_default("jwt_secret", "secret")
 

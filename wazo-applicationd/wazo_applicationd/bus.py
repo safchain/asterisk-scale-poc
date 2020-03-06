@@ -114,7 +114,7 @@ class Bus:
                     try:
                         connection = await asynqp.connect(
                             self.config.get("amqp_host"),
-                            self.config.get("amqp_port"),
+                            int(self.config.get("amqp_port")),
                             username=self.config.get("amqp_username"),
                             password=self.config.get("amqp_password"),
                         )
