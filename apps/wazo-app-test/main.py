@@ -9,17 +9,20 @@ from wazo_applicationd_client.api import ApplicationApi
 configuration = Configuration()
 configuration.host = "http://localhost:8000"
 
+# applicationd API client
 api_client = ApiClient(configuration)
 api = ApplicationApi(api_client)
 
+# auth client
 c = wazo_auth_client.Client('localhost', username='admin', password='secret', https=False)
 
-# Tokens
-reply = c.token.new('wazo_user', expiration=3600, session_type='mobile') 
-print(reply)
+# websocketd client
+reply = c.token.new('wazo_user', expiration=3600, session_type='mobile')
 c = wazo_websocketd_client.Client("localhost", port=9502, token=reply["token"], verify_certificate=False)
 
-done = False
+# register the app, see asterisk dialplan
+api.register_application10_applications_application_name_post("test")
+print("App test registered")
 
 def callback(data):
     print(data)
@@ -37,4 +40,5 @@ def callback(data):
 
 c.on('user_outgoing_call_created', callback)
 
+print("App started")
 c.run()
