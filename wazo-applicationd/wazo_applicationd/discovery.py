@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import asyncio
 from asyncio import Task
-import consul.aio  # type: ignore
 import logging
+import consul  # type: ignore
 
 from typing import Any
 from typing import List
@@ -18,6 +18,7 @@ from typing import Callable
 from .config import Config
 from .context import Context
 from .leader import LeaderManager
+from .consul import Consul
 
 from .models.application import Application
 from .models.service import AsteriskNode, Status
@@ -32,23 +33,16 @@ SERVICE_ID = "applicationd"
 class Discovery:
 
     config: Config
+    consul: Consul
     leader: LeaderManager
-    _consul: consul.aoi.Consul
     _ast_nodes_watcher_task: Union[Task[Any], None]
     _node_ok_cbs: List[Callable[[AsteriskNode], Awaitable[None]]]
     _node_ko_cbs: List[Callable[[AsteriskNode], Awaitable[None]]]
 
-    def __init__(self, config: Config, leader: LeaderManager) -> None:
+    def __init__(self, config: Config, consul: Consul, leader: LeaderManager) -> None:
         self.config = config
+        self.consul = consul
         self.leader = leader
-
-        loop = asyncio.get_event_loop()
-
-        self._consul = consul.aio.Consul(
-            host=self.config.get("consul_host"),
-            port=int(self.config.get("consul_port")),
-            loop=loop,
-        )
 
         self._ast_nodes_watcher_task = None
         self._node_ok_cbs = []
@@ -72,7 +66,7 @@ class Discovery:
 
         logger.info("Registering application {} in Consul".format(name))
         try:
-            response = await self._consul.kv.put(
+            response = await self.consul.kv.put(
                 "applications/{}".format(application_uuid), application_uuid
             )
             if response is not True:
@@ -89,7 +83,7 @@ class Discovery:
         uuid = self.config.get("uuid")
         while True:
             try:
-                response = await self._consul.agent.service.register(
+                response = await self.consul.agent.service.register(
                     SERVICE_ID,
                     service_id=uuid,
                     address=self.config.get("host"),
@@ -98,7 +92,7 @@ class Discovery:
                 if response is not True:
                     raise Exception("registering service node {}".format(uuid))
 
-                response = await self._consul.agent.check.register(
+                response = await self.consul.agent.check.register(
                     self._http_node_check_id(),
                     consul.Check.http(self.config.get("healthcheck_url"), "15s"),
                     service_id=uuid,
@@ -143,7 +137,7 @@ class Discovery:
         ast_nodes: Dict[str, AsteriskNode] = {}
 
         try:
-            _, nodes = await self._consul.health.service("asterisk")
+            _, nodes = await self.consul.health.service("asterisk")
         except Exception as e:
             logger.error("Consul: %s", e)
             return ast_nodes
@@ -179,7 +173,7 @@ class Discovery:
                     for cb in self._node_ko_cbs:
                         await cb(ast_node_)
 
-            i, _ = await self._consul.health.service("asterisk")
+            i, _ = await self.consul.health.service("asterisk")
             prev_index = int(i)
 
             while True:
@@ -188,7 +182,7 @@ class Discovery:
                         "Check changes on asterisk nodes index %d", prev_index,
                     )
 
-                    i, nodes = await self._consul.health.service(
+                    i, nodes = await self.consul.health.service(
                         "asterisk", wait="30s", index=prev_index
                     )
                     index = int(i)

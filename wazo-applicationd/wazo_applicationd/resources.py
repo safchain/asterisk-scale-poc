@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import asyncio
 from asyncio import Task
-import consul.aio  # type: ignore
 import logging
 from dataclasses import dataclass
 import os
@@ -13,14 +12,13 @@ from datetime import datetime
 
 from typing import Union
 from typing import Dict
-from typing import Callable
-from typing import Awaitable
 from typing import List
 from typing import Any
 
 from .config import Config
 from .context import Context
 from .discovery import Discovery
+from .consul import Consul
 
 from .models.application import Application
 from .models.service import AsteriskNode
@@ -44,25 +42,14 @@ class ChannelContext:
 class ResourceManager:
 
     config: Config
-    _consul: consul.aoi.Consul
-    _watchers: Dict[str, Task[Any]]
-    _consul_sessions: Dict[str, str]
+    consul: Consul
     _session_resource: str
     _session_resource_time: datetime
 
-    def __init__(self, config: Config, discovery: Discovery) -> None:
+    def __init__(self, config: Config, consul: Consul, discovery: Discovery) -> None:
         self.config = config
+        self.consul = consul
 
-        loop = asyncio.get_event_loop()
-
-        self._consul = consul.aio.Consul(
-            host=self.config.get("consul_host"),
-            port=int(self.config.get("consul_port")),
-            loop=loop,
-        )
-
-        self._watchers = {}
-        self._consul_sessions = {}
         self._session_resource = ""
 
         discovery.on_node_ok(self._on_node_ok)
@@ -77,101 +64,35 @@ class ResourceManager:
     async def _on_node_ko(self, node: AsteriskNode) -> None:
         logger.debug("Node %s is now in KO mode", node.id)
 
-    async def _get_or_create_session(
-        self, name: str, checks: List[str] = None
-    ) -> Union[str, None]:
-        session = self._consul_sessions.get(name)
-        if session:
-            return session
-
-        try:
-            session = await self._consul.session.create(name=name, checks=checks)
-            if not session:
-                raise Exception("unable to create %s session", name)
-            self._consul_sessions[name] = session
-
-            return session
-        except Exception as e:
-            logger.error("Consul: %s", e)
-        return None
-
-    async def _kv_put(self, key: str, value: str, session: str = None) -> bool:
-        logger.info("Add key %s with value %s", key, value)
-
-        try:
-            response = await self._consul.kv.put(key, value, acquire=session)
-            if response is not True:
-                raise Exception("unable to put key {}".format(key))
-        except Exception as e:
-            logger.error("Consul: %s", e)
-            return False
-
-        return True
-
-    async def _kv_get(self, key: str) -> Union[str, None]:
-        try:
-            _, entry = await self._consul.kv.get(key)
-            if not entry:
-                return None
-            return entry.get("Value").decode()
-        except Exception as e:
-            logger.error("Consul: %s", e)
-        return None
-
-    async def _kv_get_multi(self, key: str) -> Union[List[Any], None]:
-        try:
-            _, entries = await self._consul.kv.get(key, recurse=True)
-            if not entries:
-                return None
-            return entries
-        except Exception as e:
-            logger.error("Consul: %s", e)
-        return None
-
     async def register_master_bridge(self, context: Context, bridge_id: str) -> bool:
-        session = await self._get_or_create_session(
+        session = await self.consul.get_or_create_session(
             self._asterisk_session_name(context), [helpers.asterisk_check_id(context)]
         )
         if not session:
             return False
 
-        return await self._kv_put(
+        return await self.consul.kv_put(
             "bridges/{}/master".format(bridge_id), context.asterisk_id, session=session
         )
 
     async def register_slave_bridge_channel(
         self, context: Context, bridge_id: str, channel_id: str
     ) -> bool:
-        session = await self._get_or_create_session(
+        session = await self.consul.get_or_create_session(
             self._asterisk_session_name(context), [helpers.asterisk_check_id(context)]
         )
         if not session:
             return False
 
-        return await self._kv_put(
+        return await self.consul.kv_put(
             "bridges/{}/slaves/{}".format(bridge_id, context.asterisk_id),
             channel_id,
             session=session,
         )
 
-    async def _kv_delete(
-        self, key, session_name: str = "", recurse: bool = False
-    ) -> bool:
-        logger.info("Delete key %s", key)
-
-        try:
-            response = await self._consul.kv.delete(key, recurse=recurse)
-            if response is not True:
-                raise Exception("unable to delete key {}".format(key))
-        except Exception as e:
-            logger.error("Consul: %s", e)
-            return False
-
-        return True
-
     async def unregister_master_bridge(self, context: Context, bridge_id: str) -> bool:
         try:
-            await self._kv_delete(
+            await self.consul.kv_delete(
                 "bridges/{}/master".format(bridge_id), recurse=True,
             )
         except Exception:
@@ -181,7 +102,7 @@ class ResourceManager:
 
     async def unregister_slave_bridge(self, context: Context, bridge_id: str) -> bool:
         try:
-            await self._kv_delete(
+            await self.consul.kv_delete(
                 "bridges/{}/slaves/{}".format(bridge_id, context.asterisk_id),
                 recurse=True,
             )
@@ -193,14 +114,14 @@ class ResourceManager:
     async def unregister_slave_bridge_channel(
         self, context: Context, bridge_id: str, channel_id: str
     ) -> None:
-        await self._kv_delete(
+        await self.consul.kv_delete(
             "bridges/{}/slaves/{}".format(bridge_id, context.asterisk_id)
         )
 
     async def retrieve_master_bridge_context(
         self, bridge_id: str
     ) -> Union[Context, None]:
-        value = await self._kv_get("bridges/{}/master".format(bridge_id))
+        value = await self.consul.kv_get("bridges/{}/master".format(bridge_id))
         if value:
             return Context(asterisk_id=value)
         return None
@@ -208,14 +129,14 @@ class ResourceManager:
     async def retrieve_slave_bridge_channel(
         self, context: Context, bridge_id: str
     ) -> Union[str, None]:
-        return await self._kv_get(
+        return await self.consul.kv_get(
             "bridges/{}/slaves/{}".format(bridge_id, context.asterisk_id)
         )
 
     async def retrieve_slave_bridge_channel_contexts(
         self, bridge_id: str
     ) -> List[ChannelContext]:
-        entries = await self._kv_get_multi("bridges/{}/slaves/".format(bridge_id))
+        entries = await self.consul.kv_get_multi("bridges/{}/slaves/".format(bridge_id))
         if not entries:
             return []
 
@@ -240,7 +161,7 @@ class ResourceManager:
             name = self._asterisk_session_name(context)
 
             try:
-                session = await self._consul.session.create(
+                session = await self.consul.session.create(
                     name=name, checks=[helpers.asterisk_check_id(context)]
                 )
                 if not session:
@@ -253,68 +174,11 @@ class ResourceManager:
         if not self._session_resource:
             raise Exception("no session available")
 
-        return await self._kv_put(
+        return await self.consul.kv_put(
             "resources/{}".format(key),
             context.asterisk_id,
             session=self._session_resource,
         )
 
     async def delete_resource_id_context(self, key: str) -> None:
-        await self._kv_delete("resources/{}".format(key))
-
-    def watch_key(
-        self,
-        watch_id: str,
-        key: str,
-        on_create: Callable[[str, Union[List[Any], str]], Awaitable[None]] = None,
-        on_update: Callable[[str, Union[List[Any], str]], Awaitable[None]] = None,
-        on_delete: Callable[[str], Awaitable[None]] = None,
-    ) -> None:
-        loop = asyncio.get_event_loop()
-        self._watchers[watch_id] = loop.create_task(
-            self._watch_key(key, on_create, on_update, on_delete)
-        )
-
-    def stop_watch_key(self, watch_id: str) -> None:
-        task = self._watchers.pop(watch_id, None)
-        if task:
-            task.cancel()
-
-    async def _watch_key(
-        self,
-        key: str,
-        on_create: Callable[[str, Union[List[Any], str]], Awaitable[None]] = None,
-        on_update: Callable[[str, Union[List[Any], str]], Awaitable[None]] = None,
-        on_delete: Callable[[str], Awaitable[None]] = None,
-    ) -> None:
-        try:
-            i, _ = await self._consul.kv.get(key)
-            prev_index = int(i)
-
-            while True:
-                try:
-                    logger.debug(
-                        "Check changes for on key %s with index %d", key, prev_index,
-                    )
-
-                    i, entry = await self._consul.kv.get(
-                        key, wait="30s", index=prev_index
-                    )
-                    index = int(i)
-
-                    if index != prev_index:
-                        if entry:
-                            if entry["CreateIndex"] == entry["ModifyIndex"]:
-                                if on_create:
-                                    await on_create(key, entry)
-                            elif on_update:
-                                await on_update(key, entry)
-                        else:
-                            if on_delete:
-                                await on_delete(key)
-
-                    prev_index = index
-                except Exception as e:
-                    logger.error("Consul: %s", e)
-        except asyncio.CancelledError:
-            pass
+        await self.consul.kv_delete("resources/{}".format(key))

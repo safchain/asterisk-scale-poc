@@ -12,6 +12,7 @@ from typing import Type
 from types import TracebackType
 
 from .config import Config
+from .consul import Consul
 from .bus import Bus
 from .api import API
 from .discovery import Discovery
@@ -24,10 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 def run(config: Config) -> None:
-    leader = LeaderManager(config)
-    discovery = Discovery(config, leader)
+    consul = Consul(config)
+    leader = LeaderManager(config, consul)
+    discovery = Discovery(config, consul, leader)
     bus = Bus(config)
-    rm = ResourceManager(config, discovery)
+    rm = ResourceManager(config, consul, discovery)
     service = Service(config, discovery, rm)
     stasis = Stasis(config, bus, service, discovery, rm)
     api = API(config, discovery, service)

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import asyncio
 from asyncio import Task
-import consul.aio  # type: ignore
 import logging
 
 from typing import Any
@@ -16,6 +15,7 @@ from typing import Callable
 from typing import Awaitable
 
 from .config import Config
+from .consul import Consul
 
 
 logger = logging.getLogger(__name__)
@@ -24,25 +24,18 @@ logger = logging.getLogger(__name__)
 class LeaderManager:
 
     config: Config
-    _consul: consul.aoi.Consul
+    consul: Consul
     _elections: Dict[str, Task[Any]]
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, consul: Consul) -> None:
         self.config = config
-
-        loop = asyncio.get_event_loop()
-
-        self._consul = consul.aio.Consul(
-            host=self.config.get("consul_host"),
-            port=int(self.config.get("consul_port")),
-            loop=loop,
-        )
+        self.consul = consul
 
         self._elections = {}
 
     async def _wait_for_key_update(self, key: str, wait: int) -> None:
-        index, _ = await self._consul.kv.get(key)
-        await self._consul.kv.get(key, wait="{}s".format(wait), index=str(index))
+        index, _ = await self.consul.kv.get(key)
+        await self.consul.kv.get(key, wait="{}s".format(wait), index=str(index))
 
     async def start_election(
         self,
@@ -84,13 +77,13 @@ class LeaderManager:
                 is_success: bool = False
                 try:
                     if not session:
-                        session = await self._consul.session.create(
+                        session = await self.consul.session.create(
                             name=key, behavior="delete", checks=checks, ttl=ttl
                         )
                     else:
-                        session = await self._consul.session.renew(session)
+                        session = await self.consul.session.renew(session)
 
-                    is_success = await self._consul.kv.put(key, key, acquire=session)
+                    is_success = await self.consul.kv.put(key, key, acquire=session)
                 except Exception as e:
                     session = ""
                     await asyncio.sleep(1)

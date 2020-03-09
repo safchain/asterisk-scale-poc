@@ -149,11 +149,15 @@ class Stasis:
     ) -> None:
         bridge_id = channel_entered.bridge.id
 
-        # NOTE(safchain) this block get/set is probably racy, maybe need to use a transaction ?
+        # first try to create in order to leverage the lock mechanism
+        is_new_master = await self.rm.register_master_bridge(
+            context, channel_entered.bridge.id
+        )
+        if is_new_master:
+            return
+
         master_context = await self.rm.retrieve_master_bridge_context(bridge_id)
-        if not master_context:
-            await self.rm.register_master_bridge(context, channel_entered.bridge.id)
-        elif master_context != context:
+        if master_context != context:
             # call the master asterisk if not already done
             channel_id = await self.rm.retrieve_slave_bridge_channel(context, bridge_id)
 
