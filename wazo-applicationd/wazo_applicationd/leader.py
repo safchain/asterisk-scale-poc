@@ -81,7 +81,8 @@ class LeaderManager:
                             name=key, behavior="delete", checks=checks, ttl=ttl
                         )
                     else:
-                        session = await self.consul.session.renew(session)
+                        res = await self.consul.session.renew(session)
+                        session = res.get('ID')
 
                     is_success = await self.consul.kv.put(key, key, acquire=session)
                 except Exception as e:
