@@ -81,7 +81,7 @@ class Service:
                 channel_id, x_asterisk_id=context.asterisk_id
             )
         except ApiException as e:
-            logging.error("Unable to get channel {} : {}".format(channel_id, e))
+            logging.error("Unable to get channel %s: %s", channel_id, e)
         return None
 
     async def get_channel_var(
@@ -94,9 +94,7 @@ class Service:
             )
             return res.value
         except ApiException as e:
-            logging.error(
-                "Unable to get variable to channel {} : {}".format(channel_id, e)
-            )
+            logging.error("Unable to get variable to channel %s: %s", channel_id, e)
         return None
 
     async def set_channel_var(
@@ -114,9 +112,7 @@ class Service:
         try:
             await self.set_channel_var(context, channel, var, value)
         except ApiException as e:
-            logging.error(
-                "Unable to set variable to channel {} : {}".format(channel.id, e)
-            )
+            logging.error("Unable to set variable to channel %s: %s", channel.id, e)
 
         for _ in range(retry + 1):
             try:
@@ -126,15 +122,15 @@ class Service:
                 if res.value == value:
                     return
             except Exception as e:
-                logger.debug("failed to get variable {} : {}".format(var, e))
+                logger.debug("failed to get variable %s, %s", var, e)
             finally:
                 logger.debug("waiting for a setvar to complete")
                 await asyncio.sleep(0.1)
 
-        raise Exception("failed to set channel variable {}={}".format(var, value))
+        raise Exception("failed to set channel variable %s=%s", var, value)
 
     async def channel_answer(self, context: Context, channel_id: str) -> None:
-        logger.info("Answering channel {}".format(channel_id))
+        logger.info("Answering channel %s", channel_id)
 
         api = ChannelsApi(self._api_client)
         try:
@@ -145,7 +141,7 @@ class Service:
             raise NoSuchChannelException(channel_id)
 
     async def channel_mute_start(self, context: Context, channel_id: str) -> None:
-        logger.info("Answering channel {}".format(channel_id))
+        logger.info("Answering channel %s", channel_id)
 
         api = ChannelsApi(self._api_client)
         try:
@@ -156,7 +152,7 @@ class Service:
             raise NoSuchChannelException(channel_id)
 
     async def channel_mute_stop(self, context: Context, channel_id: str) -> None:
-        logger.info("Answering channel {}".format(channel_id))
+        logger.info("Answering channel %s", channel_id)
 
         api = ChannelsApi(self._api_client)
         try:
@@ -301,7 +297,7 @@ class Service:
         return normalized
 
     async def channel_hangup(self, context: Context, channel_id: str) -> None:
-        logger.info("Hangup channel {}".format(channel_id))
+        logger.info("Hangup channel %s", channel_id)
 
         api = ChannelsApi(self._api_client)
         try:

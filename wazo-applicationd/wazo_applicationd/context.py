@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Context:
 
+    # NOTE(safchain) shouldn't the application uuid part of the context ? it could make sense as all the resource are
+    # part of an application and some of the internal things rely on application uuids (originate)
     asterisk_id: str
 
     def __eq__(self, other):
@@ -29,15 +31,12 @@ class Context:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_token(self, config: Config) -> str:
-        payload = {"asterisk_id": self.asterisk_id}
-        return jwt.encode(payload, config.get("jwt_secret"), algorithm="HS256").decode()
+    def marshal(self) -> str:
+        return self.asterisk_id
 
     @staticmethod
-    def from_token(config: Config, token: str) -> Context:
-        payload = jwt.decode(token, config.get("jwt_secret"), algorithm="HS256")
-        asterisk_id = payload.get("asterisk_id", "")
-        return Context(asterisk_id=asterisk_id)
+    def unmarshal(value: str) -> Context:
+        return Context(asterisk_id=value)
 
     @staticmethod
     async def from_resource_id(config: Config, key: str) -> Context:
@@ -53,9 +52,9 @@ class Context:
         )
 
         try:
-            _, entry = await c.kv.get("resources/{}".format(key))
+            _, entry = await c.kv.get("contexts/{}".format(key))
             if entry:
-                return Context(asterisk_id=entry.get("Value").decode())
+                return Context.unmarshal(entry.get("Value").decode())
         except Exception as e:
             logger.error("Context: %s", e)
         return Context(asterisk_id="")

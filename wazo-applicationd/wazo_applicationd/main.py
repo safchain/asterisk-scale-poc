@@ -27,28 +27,29 @@ logger = logging.getLogger(__name__)
 def run(config: Config) -> None:
     consul = Consul(config)
     leader = LeaderManager(config, consul)
-    discovery = Discovery(config, consul, leader)
+    discovery = Discovery(config, consul)
     bus = Bus(config)
     rm = ResourceManager(config, consul, discovery)
     service = Service(config, discovery, rm)
-    stasis = Stasis(config, bus, service, discovery, rm)
+    stasis = Stasis(config, bus, service, discovery, rm, leader)
     api = API(config, discovery, service)
-
-    stasis.subscribe_events()
 
     loop = asyncio.get_event_loop()
 
     api_task = loop.create_task(api.run())
     bus_task = loop.create_task(bus.run())
+    stasis_task = loop.create_task(stasis.run())
     discovery_task = loop.create_task(discovery.run())
 
     try:
         loop.run_until_complete(api_task)
     finally:
         bus_task.cancel()
+        stasis_task.cancel()
         discovery_task.cancel()
 
         loop.run_until_complete(bus_task)
+        loop.run_until_complete(stasis_task)
         loop.run_until_complete(discovery_task)
 
         loop.close()

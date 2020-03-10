@@ -17,7 +17,6 @@ from typing import Callable
 
 from .config import Config
 from .context import Context
-from .leader import LeaderManager
 from .consul import Consul
 
 from .models.application import Application
@@ -34,15 +33,12 @@ class Discovery:
 
     config: Config
     consul: Consul
-    leader: LeaderManager
-    _ast_nodes_watcher_task: Union[Task[Any], None]
     _node_ok_cbs: List[Callable[[AsteriskNode], Awaitable[None]]]
     _node_ko_cbs: List[Callable[[AsteriskNode], Awaitable[None]]]
 
-    def __init__(self, config: Config, consul: Consul, leader: LeaderManager) -> None:
+    def __init__(self, config: Config, consul: Consul) -> None:
         self.config = config
         self.consul = consul
-        self.leader = leader
 
         self._ast_nodes_watcher_task = None
         self._node_ok_cbs = []
@@ -50,15 +46,7 @@ class Discovery:
 
     async def run(self) -> None:
         logger.info("Start Discovery")
-
-        await self.leader.start_election(
-            "node-status-watcher/leader",
-            on_master=self._start_watching_ast_nodes,
-            on_slave=self._stop_watching_ast_nodes,
-            checks=[self._http_node_check_id()],
-        )
-
-        await self._register_service()
+        await asyncio.gather(self._register_service(), self._watch_ast_nodes())
 
     async def register_application(self, name: str) -> Application:
         application = Application(uuid=helpers.resource_uuid(name))
@@ -76,7 +64,7 @@ class Discovery:
 
         return application
 
-    def _http_node_check_id(self) -> str:
+    def http_service_check_id(self) -> str:
         return "http-status-{}".format(self.config.get("uuid"))
 
     async def _register_service(self) -> None:
@@ -93,7 +81,7 @@ class Discovery:
                     raise Exception("registering service node {}".format(uuid))
 
                 response = await self.consul.agent.check.register(
-                    self._http_node_check_id(),
+                    self.http_service_check_id(),
                     consul.Check.http(self.config.get("healthcheck_url"), "15s"),
                     service_id=uuid,
                 )
@@ -153,14 +141,6 @@ class Discovery:
 
         return ast_nodes
 
-    async def _start_watching_ast_nodes(self, key: str) -> None:
-        loop = asyncio.get_event_loop()
-        self._ast_nodes_watcher_task = loop.create_task(self._watch_ast_nodes())
-
-    async def _stop_watching_ast_nodes(self, key: str) -> None:
-        if self._ast_nodes_watcher_task:
-            self._ast_nodes_watcher_task.cancel()
-
     async def _watch_ast_nodes(self) -> None:
         logging.info("Start watching nodes")
         try:
@@ -212,6 +192,7 @@ class Discovery:
                     prev_index = index
                 except Exception as e:
                     logger.error("unable to get node states %s", e)
+                    await asyncio.sleep(1)
         except asyncio.CancelledError:
             pass
         except Exception as e:

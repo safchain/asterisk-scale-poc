@@ -137,13 +137,14 @@ class Consul:
         self,
         watch_id: str,
         key: str,
-        on_create: Callable[[str, Union[List[Any], str]], Awaitable[None]] = None,
-        on_update: Callable[[str, Union[List[Any], str]], Awaitable[None]] = None,
+        on_create: Callable[[str, str], Awaitable[None]] = None,
+        on_update: Callable[[str, str], Awaitable[None]] = None,
         on_delete: Callable[[str], Awaitable[None]] = None,
+        recurse: bool = False,
     ) -> None:
         loop = asyncio.get_event_loop()
         self._watchers[watch_id] = loop.create_task(
-            self._watch_key(key, on_create, on_update, on_delete)
+            self._watch_key(key, on_create, on_update, on_delete, recurse=recurse)
         )
 
     def stop_watch_key(self, watch_id: str) -> None:
@@ -154,32 +155,58 @@ class Consul:
     async def _watch_key(
         self,
         key: str,
-        on_create: Callable[[str, Union[List[Any], str]], Awaitable[None]] = None,
-        on_update: Callable[[str, Union[List[Any], str]], Awaitable[None]] = None,
+        on_create: Callable[[str, str], Awaitable[None]] = None,
+        on_update: Callable[[str, str], Awaitable[None]] = None,
         on_delete: Callable[[str], Awaitable[None]] = None,
+        recurse: bool = False,
     ) -> None:
         try:
-            i, _ = await self._consul.kv.get(key)
+            i, res = await self._consul.kv.get(key, recurse=recurse)
             prev_index = int(i)
+
+            # NOTE(safchain) due to lack of delete key report we store here keys that were present between each loop
+            # be careful about the memory usage
+            prev_keys = set()
+            if recurse:
+                prev_keys = set([entry["Key"] for entry in res])
 
             while True:
                 try:
                     logger.debug(
-                        "Check changes for on key %s with index %d", key, prev_index,
+                        "Check changes for on key %s with index %d", key, prev_index
                     )
 
-                    i, entry = await self._consul.kv.get(
-                        key, wait="30s", index=prev_index
+                    i, res = await self._consul.kv.get(
+                        key, wait="30s", index=prev_index, recurse=recurse
                     )
                     index = int(i)
 
-                    if index != prev_index:
-                        if entry:
+                    if index == prev_index:
+                        continue
+
+                    if recurse:
+                        keys = set([entry["Key"] for entry in res])
+
+                        to_del = prev_keys - keys
+                        for key in to_del:
+                            if on_delete:
+                                await on_delete(key)
+
+                        for entry in res:
                             if entry["CreateIndex"] == entry["ModifyIndex"]:
                                 if on_create:
                                     await on_create(key, entry)
+                                elif on_update:
+                                    await on_update(key, entry)
+
+                        prev_keys = keys
+                    else:
+                        if res:
+                            if res["CreateIndex"] == res["ModifyIndex"]:
+                                if on_create:
+                                    await on_create(key, res)
                             elif on_update:
-                                await on_update(key, entry)
+                                await on_update(key, res)
                         else:
                             if on_delete:
                                 await on_delete(key)

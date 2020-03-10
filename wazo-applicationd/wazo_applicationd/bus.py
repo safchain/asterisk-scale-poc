@@ -124,7 +124,7 @@ class Bus:
                             self._produce(connection, _out_queue),
                         )
                     except asynqp.AMQPError as err:
-                        logger.error("Connection error {}".format(err))
+                        logger.error("Connection error %s", err)
                         if connection is not None:
                             await connection.close()
                             connection = None
@@ -160,7 +160,7 @@ class Bus:
                 try:
                     obj = json.loads(queue_msg.body)
                 except Exception as e:
-                    logger.error("Error while decoding AMQP message: {}".format(e))
+                    logger.error("Error while decoding AMQP message: %s", e)
                     continue
 
                 type = obj.get("type")
@@ -169,12 +169,12 @@ class Bus:
 
                 asterisk_id = obj.get("asterisk_id")
                 if not asterisk_id:
-                    logger.error("Error message without asterisk id: {}".format(obj))
+                    logger.error("Error message without asterisk id: %s", queue_msg.body)
                     continue
 
                 application_uuid = obj.get("application")
                 if not Application.is_valid_uuid(application_uuid):
-                    logger.error("Error not a valid application: {}".format(obj))
+                    logger.error("Error not a valid application: %s", queue_msg.body)
                     continue
 
                 msg = api.deserialize_obj(obj, "Message")
