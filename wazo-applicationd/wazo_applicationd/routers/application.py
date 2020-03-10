@@ -15,14 +15,15 @@ from wazo_applicationd.config import Config
 from wazo_applicationd.discovery import Discovery
 from wazo_applicationd.context import Context
 from wazo_applicationd.service import Service
+from wazo_applicationd.consul import Consul
 from wazo_applicationd import helpers
 
 from wazo_applicationd.models.application import Application
 from wazo_applicationd.models.node import Node
 
-from .helpers import get_config
 from .helpers import get_discovery
 from .helpers import get_service
+from .helpers import get_consul
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +41,10 @@ async def register_application(
 async def call_answer(
     application_uuid: str,
     call_id: str,
-    config: Config = Depends(get_config),
+    consul: Consul = Depends(get_consul),
     service: Service = Depends(get_service),
 ) -> None:
-    context = await Context.from_resource_id(config, call_id)
+    context = await Context.from_resource_id(consul, call_id)
     await service.channel_answer(context, call_id)
 
 
@@ -52,7 +53,7 @@ async def create_node_with_calls(
     application_uuid: str,
     node_name: str,
     call_ids: List[str],
-    config: Config = Depends(get_config),
+    consul: Consul = Depends(get_consul),
     service: Service = Depends(get_service),
 ) -> Node:
     bridge_id = helpers.resource_uuid(application_uuid, node_name)
@@ -64,10 +65,10 @@ async def create_node_with_calls(
 async def call_mute_start(
     application_uuid: str,
     call_id: str,
-    config: Config = Depends(get_config),
+    consul: Consul = Depends(get_consul),
     service: Service = Depends(get_service),
 ):
-    context = await Context.from_resource_id(config, call_id)
+    context = await Context.from_resource_id(consul, call_id)
     await service.channel_mute_start(context, call_id)
 
 
@@ -75,10 +76,10 @@ async def call_mute_start(
 async def call_mute_stop(
     application_uuid: str,
     call_id: str,
-    config: Config = Depends(get_config),
+    consul: Consul = Depends(get_consul),
     service: Service = Depends(get_service),
 ):
-    context = await Context.from_resource_id(config, call_id)
+    context = await Context.from_resource_id(consul, call_id)
     await service.channel_mute_stop(context, call_id)
 
 
@@ -86,10 +87,9 @@ async def call_mute_stop(
 async def call_hangup(
     application_uuid: str,
     call_id: str,
-    x_context_token: str = Header(None),
-    config: Config = Depends(get_config),
+    consul: Consul = Depends(get_consul),
     service: Service = Depends(get_service),
 ) -> None:
-    context = await Context.from_resource_id(config, call_id)
+    context = await Context.from_resource_id(consul, call_id)
     await service.channel_hangup(context, call_id)
 

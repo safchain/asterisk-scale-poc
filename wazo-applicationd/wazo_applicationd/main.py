@@ -30,9 +30,9 @@ def run(config: Config) -> None:
     discovery = Discovery(config, consul)
     bus = Bus(config)
     rm = ResourceManager(config, consul, discovery)
-    service = Service(config, discovery, rm)
+    service = Service(config, discovery, rm, consul)
     stasis = Stasis(config, bus, service, discovery, rm, leader)
-    api = API(config, discovery, service)
+    api = API(config, discovery, service, consul)
 
     loop = asyncio.get_event_loop()
 

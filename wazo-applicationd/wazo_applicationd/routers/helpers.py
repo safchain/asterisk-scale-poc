@@ -10,6 +10,7 @@ from starlette.responses import Response
 from wazo_applicationd.config import Config
 from wazo_applicationd.discovery import Discovery
 from wazo_applicationd.service import Service
+from wazo_applicationd.consul import Consul
 
 from typing import cast
 
@@ -24,3 +25,7 @@ def get_discovery(request: Request) -> Discovery:
 
 def get_config(request: Request) -> Config:
     return cast(Config, request.state.config)
+
+
+def get_consul(request: Request) -> Consul:
+    return cast(Consul, request.state.consul)

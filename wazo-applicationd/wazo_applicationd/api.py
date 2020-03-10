@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import consul.aio  # type: ignore
 import uvicorn  # type: ignore
 from fastapi import FastAPI  # type: ignore
 from starlette.requests import Request
@@ -19,6 +18,7 @@ from .config import Config
 from .discovery import Discovery
 from .service import Service
 from .context import Context
+from .consul import Consul
 
 from .routers import application
 from .routers import status
@@ -31,17 +31,19 @@ class API:
     config: Config
     discovery: Discovery
     service: Service
+    consul: Consul
     _app: FastAPI
 
-    def __init__(self, config: Config, discovery: Discovery, service: Service):
+    def __init__(
+        self, config: Config, discovery: Discovery, service: Service, consul: Consul
+    ):
         self.config = config
         self.discovery = discovery
         self.service = service
+        self.consul = consul
 
         self._app = FastAPI(
-            title="Wazo applicationd",
-            description="Applicationd",
-            version="0.1.0",
+            title="Wazo applicationd", description="Applicationd", version="0.1.0",
         )
 
         self._setup_middlewares()
@@ -64,6 +66,7 @@ class API:
             request.state.config = self.config
             request.state.discovery = self.discovery
             request.state.service = self.service
+            request.state.consul = self.consul
 
             response = await call_next(request)
         finally:

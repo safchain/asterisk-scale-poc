@@ -14,6 +14,7 @@ from .discovery import Discovery
 from .config import Config
 from .context import Context
 from .resources import ResourceManager
+from .consul import Consul
 from .exceptions import (
     ChannelCreateException,
     NoSuchChannelException,
@@ -48,13 +49,15 @@ class Service:
     config: Config
     discovery: Discovery
     rm: ResourceManager
+    consul: Consul
     _api_client: ApiClient
 
     def __init__(
-        self, config: Config, discovery: Discovery, rm: ResourceManager
+        self, config: Config, discovery: Discovery, rm: ResourceManager, consul: Consul
     ) -> None:
         self.config = config
         self.discovery = discovery
+        self.consul = consul
         self.rm = rm
 
         configuration = Configuration()
@@ -81,7 +84,7 @@ class Service:
                 channel_id, x_asterisk_id=context.asterisk_id
             )
         except ApiException as e:
-            logging.error("Unable to get channel %s: %s", channel_id, e)
+           pass
         return None
 
     async def get_channel_var(
@@ -94,7 +97,7 @@ class Service:
             )
             return res.value
         except ApiException as e:
-            logging.error("Unable to get variable to channel %s: %s", channel_id, e)
+            pass
         return None
 
     async def set_channel_var(
@@ -180,7 +183,7 @@ class Service:
     ) -> str:
         ast_channels: Dict[str, List[str]] = {}
         for channel_id in channel_ids:
-            context = await Context.from_resource_id(self.config, channel_id)
+            context = await Context.from_resource_id(self.consul, channel_id)
             if not context:
                 raise NoSuchChannelException(channel_id)
 
