@@ -27,24 +27,24 @@ RUN make install-headers
 RUN rm -rf /etc/asterisk/*
 
 # Install Asterisk consul module
-RUN git clone --single-branch --branch scale https://github.com/lebauce/asterisk-res-consul /usr/src/asterisk-res-consul
-WORKDIR /usr/src/asterisk-res-consul
+RUN git clone https://github.com/wazo-platform/wazo-res-consul.git /usr/src/wazo-res-consul
+WORKDIR /usr/src/wazo-res-consul
 RUN CFLAGS=-g make
 RUN make clean
 RUN make install DOCDIR=/var/lib/asterisk/documentation/thirdparty/
 #RUN make samples
 
 # Install Asterisk consul discovery module
-RUN git clone --single-branch --branch scale https://github.com/lebauce/asterisk-res-consul-discovery /usr/src/asterisk-res-consul-discovery
-WORKDIR /usr/src/asterisk-res-consul-discovery
+RUN git clone https://github.com/wazo-platform/wazo-res-consul-discovery.git /usr/src/wazo-res-consul-discovery
+WORKDIR /usr/src/wazo-res-consul-discovery
 RUN CFLAGS=-g make
 RUN make clean
 RUN make install DOCDIR=/var/lib/asterisk/documentation/thirdparty/
 #RUN make samples
 
 # Install Asterisk consul app module
-RUN git clone --single-branch --branch scale https://github.com/lebauce/asterisk-res-consul-stasis-app /usr/src/asterisk-res-consul-stasis-app
-WORKDIR /usr/src/asterisk-res-consul-stasis-app
+RUN git clone https://github.com/wazo-platform/wazo-res-consul-stasis-app.git /usr/src/wazo-res-consul-stasis-app
+WORKDIR /usr/src/wazo-res-consul-stasis-app
 RUN make clean
 RUN CFLAGS=-g make
 RUN make install DOCDIR=/var/lib/asterisk/documentation/thirdparty/
