@@ -26,7 +26,7 @@ setup(
         "pydantic==1.3",
         "python-consul==1.1.0",
         "python-dateutil==2.8.1",
-        "PyYAML==5.3",
+        "PyYAML==5.4",
         "requests==2.22.0",
         "six==1.13.0",
         "soupsieve==1.9.5",
