@@ -32,7 +32,7 @@ setup(
         "soupsieve==1.9.5",
         "starlette==0.12.9",
         "swagger-client==1.0.0",
-        "urllib3==1.25.7",
+        "urllib3==1.25.8",
         "uvicorn==0.11.1",
         "uvloop==0.14.0",
         "vine==1.3.0",
