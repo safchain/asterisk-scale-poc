@@ -23,7 +23,7 @@ setup(
         "kombu==4.6.7",
         "more-itertools==8.0.2",
         "multidict==4.7.3",
-        "pydantic==1.3",
+        "pydantic==1.6.2",
         "python-consul==1.1.0",
         "python-dateutil==2.8.1",
         "PyYAML==5.3",
