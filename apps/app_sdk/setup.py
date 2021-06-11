@@ -36,7 +36,7 @@ setup(
         "uvicorn==0.11.1",
         "uvloop==0.14.0",
         "vine==1.3.0",
-        "websockets==8.1",
+        "websockets==9.1",
         "yarl==1.4.2",
         "zipp==0.6.0"
     ],
