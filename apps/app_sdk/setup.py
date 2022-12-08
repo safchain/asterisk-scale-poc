@@ -12,7 +12,7 @@ setup(
         "asynqp==0.6",
         "attrs==19.3.0",
         "beautifulsoup4==4.8.2",
-        "certifi==2019.11.28",
+        "certifi==2022.12.7",
         "chardet==3.0.4",
         "Click==7.0",
         "fastapi==0.46.0",
